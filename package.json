@@ -1,0 +1,20 @@
+{
+    "name": "vanu-cohete-backend",
+    "version": "1.0.0",
+    "description": "Funciones Cloud para la app de Servientrega de Vanu",
+    "main": "index.ts",
+    "scripts": {
+      "lint": "eslint --ext .js,.ts .",
+      "build": "cd functions/vanu && npm run build",
+      "serve": "npm run build && firebase emulators:start --only functions",
+      "shell": "npm run build && firebase functions:shell",
+      "start": "npm run shell",
+      "deploy": "firebase deploy --only functions",
+      "logs": "firebase functions:log"
+    },
+    "private": true,
+    "engines": {
+      "node": "18"
+    }
+  }
+  

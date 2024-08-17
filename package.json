@@ -1,7 +1,7 @@
 {
     "name": "vanu-cohete-backend",
     "version": "1.0.0",
-    "description": "Funciones Cloud para la app de Servientrega de Vanu",
+    "description": "Funciones Cloud hechas en Nest.js para la app de Servientrega de Vanu",
     "main": "index.ts",
     "scripts": {
       "lint": "eslint --ext .js,.ts .",

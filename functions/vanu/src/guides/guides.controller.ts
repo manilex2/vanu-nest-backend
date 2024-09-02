@@ -92,4 +92,19 @@ export class GuidesController {
         .send({ error: `Hubo el siguiente error: ${error.response}` });
     }
   }
+
+  @Get('generateGuideServiCli')
+  async generateGuideServiCli(@Req() req: Request, @Res() res: Response) {
+    try {
+      await this.guidesService.sendDocuments();
+      res
+        .status(HttpStatus.OK)
+        .setHeader('Content-Type', 'application/json')
+        .send({ message: 'Guías generadas correctamente' });
+    } catch (error) {
+      res
+        .status(error.status)
+        .send({ error: `Hubo el siguiente error: ${error.response}` });
+    }
+  }
 }

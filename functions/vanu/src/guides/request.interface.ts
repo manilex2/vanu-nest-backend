@@ -1,0 +1,77 @@
+export interface RequestJson {
+  ID_TIPO_LOGISTICA: number;
+  nombre_ciudad: string;
+  DETALLE_ENVIO_1: string;
+  DETALLE_ENVIO_2: string;
+  DETALLE_ENVIO_3: string;
+  ID_CIUDAD_ORIGEN: string;
+  ID_CIUDAD_DESTINO: string;
+  ID_DESTINATARIO_NE_CL: string;
+  RAZON_SOCIAL_DESTI_NE: string;
+  NOMBRE_DESTINATARIO_NE: string;
+  APELLIDO_DESTINATAR_NE: string;
+  DIRECCION1_DESTINAT_NE: string;
+  SECTOR_DESTINAT_NE: string;
+  TELEFONO1_DESTINAT_NE: string;
+  TELEFONO2_DESTINAT_NE: string;
+  CODIGO_POSTAL_DEST_NE: string;
+  ID_REMITENTE_CL: string | undefined;
+  RAZON_SOCIAL_REMITE: string | undefined;
+  NOMBRE_REMITENTE: string | undefined;
+  APELLIDO_REMITE: string | undefined;
+  DIRECCION1_REMITE: string | undefined;
+  SECTOR_REMITE: string;
+  TELEFONO1_REMITE: string | undefined;
+  TELEFONO2_REMITE: string;
+  CODIGO_POSTAL_REMI: string;
+  ID_PRODUCTO: string;
+  CONTENIDO: string;
+  NUMERO_PIEZAS: number;
+  VALOR_MERCANCIA: number;
+  VALOR_ASEGURADO: number;
+  LARGO: number;
+  ANCHO: number;
+  ALTO: number;
+  PESO_FISICO: number;
+  LOGIN_CREACION: string | undefined;
+  PASSWORD: string | undefined;
+}
+
+export const requestJson: RequestJson = {
+  ID_TIPO_LOGISTICA: 1,
+  DETALLE_ENVIO_1: '',
+  DETALLE_ENVIO_2: '',
+  DETALLE_ENVIO_3: '',
+  ID_CIUDAD_ORIGEN: '',
+  ID_CIUDAD_DESTINO: '',
+  ID_DESTINATARIO_NE_CL: '',
+  RAZON_SOCIAL_DESTI_NE: '',
+  NOMBRE_DESTINATARIO_NE: '',
+  APELLIDO_DESTINATAR_NE: '',
+  DIRECCION1_DESTINAT_NE: '',
+  SECTOR_DESTINAT_NE: '',
+  TELEFONO1_DESTINAT_NE: '',
+  TELEFONO2_DESTINAT_NE: '',
+  CODIGO_POSTAL_DEST_NE: '',
+  ID_REMITENTE_CL: process.env.REMITENTE_ID,
+  RAZON_SOCIAL_REMITE: process.env.REMITENTE_RAZON_SOCIAL,
+  NOMBRE_REMITENTE: process.env.REMITENTE_NOMBRE,
+  APELLIDO_REMITE: process.env.REMITENTE_APELLIDO,
+  DIRECCION1_REMITE: process.env.REMITENTE_DIRECCION,
+  SECTOR_REMITE: '',
+  TELEFONO1_REMITE: process.env.REMITENTE_TELEFONO,
+  TELEFONO2_REMITE: '',
+  CODIGO_POSTAL_REMI: '',
+  ID_PRODUCTO: '',
+  CONTENIDO: 'Accesorio de mujer',
+  NUMERO_PIEZAS: 1,
+  VALOR_MERCANCIA: 0,
+  VALOR_ASEGURADO: 0,
+  LARGO: 0,
+  ANCHO: 0,
+  ALTO: 0,
+  PESO_FISICO: 2,
+  LOGIN_CREACION: process.env.SERVICLI_AUTH_USER,
+  PASSWORD: process.env.SERVICLI_AUTH_PASS,
+  nombre_ciudad: '',
+};

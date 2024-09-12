@@ -104,7 +104,6 @@ export class CommonService {
   /**
    * Verifica que existe la ciudad o sucursal especificada.
    * @param {string} queryStatement - El query que se realizará
-   *                                  para hacer la verificación
    * @param {[]} queryValues - Los valores o variables necesarias para el query
    * @return {boolean} True si existen en la base de datos
    */
@@ -130,14 +129,20 @@ export class CommonService {
 
   /**
    * Verifica si ya está guardado un documento en la base de datos
-   * @param {DocumentReference} docRef - Ref del documento
+   * @param {string} documentoId - ID de Contifico del documento
    * @return {boolean | null} - True si existe
    */
-  async checkDocument(docRef: DocumentReference): Promise<boolean | null> {
+  async checkDocument(documentoId: string): Promise<boolean | null> {
     let existDocument = false;
     let hasError = false;
     try {
-      existDocument = (await this.db.doc(docRef.id).get()).exists;
+      existDocument =
+        (
+          await this.db
+            .collection('documentos')
+            .where('documento', '==', documentoId)
+            .get()
+        ).docs.length > 0;
     } catch (error) {
       hasError = true;
       const errorMsg = 'Error al buscar documentos de la base de datos';

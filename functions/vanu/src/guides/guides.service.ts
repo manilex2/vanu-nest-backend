@@ -52,6 +52,20 @@ export class GuidesService {
   }
 
   /**
+   * Valida si vienen todos los parametros necesarios en el body.
+   * @param {string[]} params - Parámetros requeridos.
+   * @param {Request} req - Request traido de la consulta HTTP.
+   * @return {boolean} Retorna true si los parámetros requeridos concuerdan con los que vienen en el Request.
+   */
+  async checkBodyParams(params: string[], req: Request): Promise<boolean> {
+    const reqParamList: string[] = Object.keys(req.body.params);
+    const hasAllRequiredParams: boolean = params.every((param) =>
+      reqParamList.includes(param),
+    );
+    return hasAllRequiredParams;
+  }
+
+  /**
    * Valida si la fecha se encuentra en el formato correcto.
    * Tratará de formaterala de forma correcta
    * @param {string} fecha - Fecha para consultar el manifiesto
@@ -382,7 +396,7 @@ export class GuidesService {
   }
 
   /**
-   * Obtiene el cliente del docuento especificado.
+   * Obtiene el cliente del documento especificado.
    * @param {DocumentData} document - Objeto documento
    * @return {DocumentData} Cliente encontrado o null.
    */

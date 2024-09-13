@@ -104,26 +104,30 @@ export class CommonService {
   /**
    * Verifica que existe la ciudad o sucursal especificada.
    * @param {string} queryStatement - El query que se realizará
-   * @param {[]} queryValues - Los valores o variables necesarias para el query
+   * @param {string[]} queryValues - Los valores o variables necesarias para el query
    * @return {boolean} True si existen en la base de datos
    */
-  async checkCities(queryStatement, queryValues) {
+  async checkCities(
+    queryStatement: string,
+    queryValues: string[],
+  ): Promise<boolean> {
+    let data: boolean | number;
     let exist = false;
-    await pool
-      .query(queryStatement, queryValues)
-      .then((res) => {
-        if (res[0].length == 1) {
+    switch (queryStatement) {
+      case 'ciudad':
+        data = (await this.db.doc(queryValues[0]).get()).exists;
+        if (data) {
           exist = true;
         }
-      })
-      .catch((err) => {
-        const errorMsg =
-          `Error al buscar ciudad ${document.idCiudadDestino} o` +
-          ` sucursal ${document.idSucursalDestino} en la base de datos`;
-        console.error(errorMsg);
-        console.error(err);
-        // addLogToFirestore(1, 3, errorMsg, err.toString());
-      });
+        break;
+      case 'sucursal':
+        data = (await this.db.doc(queryValues[1]).get()).exists;
+        if (data) {
+          exist = true;
+        }
+      default:
+        break;
+    }
     return exist;
   }
 

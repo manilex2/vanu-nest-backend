@@ -1,7 +1,7 @@
 {
   "functions": [
     {
-      "source": "functions/vanu",
+      "source": "functions/vanu/dist",
       "codebase": "vanu",
       "ignore": [
         "node_modules",
@@ -11,8 +11,11 @@
         "*.local"
       ],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint",
-        "npm --prefix \"$RESOURCE_DIR\" run build"
+        "copy \"functions\\vanu\\package.json\" \"functions\\vanu\\dist\"",
+        "npm --prefix \"functions/vanu\" run lint",
+        "npm --prefix \"functions/vanu\" run build",
+        "copy \"functions\\vanu\\.env\" \"functions\\vanu\\dist\"",
+        "copy \"functions\\vanu\\package.json\" \"functions\\vanu\\dist\""
       ],
       "runtime": "nodejs20"
     }

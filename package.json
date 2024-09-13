@@ -6,7 +6,7 @@
     "scripts": {
       "lint": "eslint --ext .js,.ts .",
       "build": "cd functions/vanu && npm run build",
-      "serve": "npm run build && firebase emulators:start --only functions",
+      "serve": "npm run build && copy \"functions\\vanu\\package.json\" \"functions\\vanu\\dist\" && copy \"functions\\vanu\\.env\" \"functions\\vanu\\dist\" && firebase emulators:start --only functions",
       "shell": "npm run build && firebase functions:shell",
       "start": "npm run shell",
       "deploy": "firebase deploy --only functions",

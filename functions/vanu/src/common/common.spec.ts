@@ -1,4 +1,4 @@
-import { Common } from './common';
+import { Common } from './common.service';
 
 describe('Common', () => {
   it('should be defined', () => {

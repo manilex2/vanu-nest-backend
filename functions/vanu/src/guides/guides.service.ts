@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { RequestJson, requestJson } from './request.interface';
-import { CommonService } from '../common/common';
+import { CommonService } from '../common/common.service';
 import {
   DocumentData,
   DocumentReference,
@@ -316,7 +316,7 @@ export class GuidesService {
 
       try {
         await this.db.doc(document.id).update({
-          idEstado: 2,
+          estado: 2,
           idGuia: guia,
         });
         const msg =

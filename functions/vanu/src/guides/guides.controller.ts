@@ -6,13 +6,15 @@ import {
   HttpStatus,
   HttpException,
   Post,
+  Body,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { GuidesService } from './guides.service';
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 import { config } from 'dotenv';
-import { CommonService } from '../common/common';
+import { CommonService } from '../common/common.service';
 import { DocumentData, getFirestore } from 'firebase-admin/firestore';
+import { ParamsGuideDTO } from './paramsGuide.interface';
 
 config();
 
@@ -115,7 +117,11 @@ export class GuidesController {
   }
 
   @Post('deleteGuide')
-  async deleteguide(@Req() req: Request, @Res() res: Response) {
+  async deleteguide(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() parametros: ParamsGuideDTO,
+  ) {
     const db: FirebaseFirestore.Firestore = getFirestore();
     req.body = JSON.parse(req.body);
     try {
@@ -130,9 +136,9 @@ export class GuidesController {
         );
       }
 
-      const params = req.body.params;
-      const guia = params.guia.value;
-      const id = params.id.value;
+      const params = parametros.body;
+      const guia = params.guia;
+      const id = params.id;
 
       let deleted = false;
       await axios(
@@ -200,7 +206,7 @@ export class GuidesController {
         .collection('documentos')
         .doc(doc.id)
         .update({
-          idEstado: 4,
+          estado: 4,
           idGuia: null,
         })
         .then((response) => {

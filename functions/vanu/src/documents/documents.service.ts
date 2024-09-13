@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosResponse } from 'axios';
-import { CommonService } from '../common/common';
+import { CommonService } from '../common/common.service';
 import { Contifico, Persona } from './contifico.interface';
 import { ClienteDB, DocumentosDB } from 'src/common/database.interface';
 import {
@@ -10,6 +10,7 @@ import {
   getFirestore,
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
+import { Request } from 'express';
 
 @Injectable()
 export class DocumentsService {
@@ -257,55 +258,59 @@ export class DocumentsService {
   }
 
   /**
-   * Guarda las ciudades en la base de datos.
+   * Actualiza las ciudades en la base de datos.
    */
   async saveCities() {
-    const res = (await this.db.collection('ciudades').get()).docs;
+    let cities: string | any[];
+    let ciudad: DocumentReference;
 
-    if ((res != null && res.length == 0) || res.length == 1) {
-      let cities;
+    await axios(
+      process.env.SERVICLI_URI_CIUDADES +
+        "['" +
+        process.env.SERVICLI_AUTH_USER +
+        "','" +
+        process.env.SERVICLI_AUTH_PASS +
+        "']",
+    )
+      .then((res) => {
+        cities = res.data;
+      })
+      .catch((err) => {
+        console.error('Fallo al obtener las ciudades del API.');
+        console.error(err);
+      });
 
-      await axios(
-        process.env.SERVICLI_URI_CIUDADES +
-          "['" +
-          process.env.SERVICLI_AUTH_USER +
-          "','" +
-          process.env.SERVICLI_AUTH_PASS +
-          "']",
-      )
-        .then((res) => {
-          cities = res.data;
-        })
-        .catch((err) => {
-          console.error('Fallo al obtener las ciudades del API.');
-          console.error(err);
-        });
+    if (cities.length == 1) {
+      throw new Error('Fallo al obtener las ciudades del API.');
+    }
 
-      if (cities.length == 1) {
-        throw new Error('Fallo al obtener las ciudades del API.');
-      }
-
-      for (const city of cities) {
+    for (const city of cities) {
+      const ciudades = (
         await this.db
           .collection('ciudades')
-          .add({
-            codigo: city.id,
-            nombre: city.nombre,
-          })
-          .catch((err) => {
-            console.error('Error al insertar ciudades');
-            throw err;
-          });
-      }
-      console.log('Ciudades guardadas');
+          .where('codigo', '==', city.id)
+          .get()
+      ).docs.map((ciudad) => {
+        return ciudad.ref;
+      });
+      ciudad = ciudades[0];
+      await ciudad
+        .update({
+          nombre: city.nombre,
+        })
+        .catch((err) => {
+          console.error('Error al actualizar ciudades');
+          throw err;
+        });
     }
+    console.log('Ciudades actualizadas');
   }
 
   /**
    * Guarda la tabla estado_documento con los valores inciales.
    */
   async saveStatusDocument() {
-    const res = await (await this.db.collection('estado_documento').get()).docs;
+    const res = (await this.db.collection('estado_documento').get()).docs;
 
     if (res != null && res.length == 0) {
       await this.db
@@ -343,33 +348,80 @@ export class DocumentsService {
   }
 
   /**
-   * Guarda las sucursales en la base de datos.
+   * Guarda las sucursales, provincias y ciudades en la base de datos.
    */
   async insertSucursales() {
     const res = (await this.db.collection('sucursales').get()).docs;
+    let ciudad: DocumentReference;
+    let provincia: DocumentReference;
 
     if (res != null && res.length == 0) {
       for (const sucursal of sucursales) {
-        await this.db
-          .collection('sucursales')
-          .add({
-            tipoCS: sucursal.tipo_cs,
-            CS: sucursal.cs,
-            direccion: sucursal.direccion,
-            sector: sucursal.sector,
-            telefono: sucursal.telefono,
-            horaPromedioEntregaOficina: sucursal.hora_promedio_entrega_oficina,
-            horarioLaboral: sucursal.horario_laboral,
-            horarioFinSemana: sucursal.horario_fin_semana,
-            email: sucursal.email,
-            codigoPostal: sucursal.codigo_postal,
-            CILResponsable: sucursal.cil_responsable,
-            codigo: sucursal.id,
-          })
-          .catch((err) => {
-            console.error('Error al agregar las sucursales.');
-            throw new Error(err);
+        try {
+          const provincias = (
+            await this.db
+              .collection('provincias')
+              .where('nombre', '==', sucursal.provincia)
+              .get()
+          ).docs.map((provincia) => {
+            return provincia.ref;
           });
+
+          if (provincias.length > 0) {
+            provincia = provincias[0];
+          } else {
+            provincia = this.db.collection('provincias').doc();
+            await provincia.create({
+              nombre: sucursal.provincia,
+            });
+          }
+
+          const ciudades = (
+            await this.db
+              .collection('ciudades')
+              .where('codigo', '==', sucursal.id_ciudad)
+              .get()
+          ).docs.map((ciudad) => {
+            return ciudad.ref;
+          });
+
+          if (ciudades.length > 0) {
+            ciudad = ciudades[0];
+          } else {
+            ciudad = this.db.collection('ciudades').doc();
+            await ciudad.create({
+              codigo: sucursal.id_ciudad,
+              provincia: provincia,
+            });
+          }
+
+          await this.db
+            .collection('sucursales')
+            .add({
+              tipoCS: sucursal.tipo_cs,
+              CS: sucursal.cs,
+              direccion: sucursal.direccion,
+              sector: sucursal.sector,
+              telefono: sucursal.telefono,
+              horaPromedioEntregaOficina:
+                sucursal.hora_promedio_entrega_oficina,
+              horarioLaboral: sucursal.horario_laboral,
+              horarioFinSemana: sucursal.horario_fin_semana,
+              email: sucursal.email,
+              codigoPostal: sucursal.codigo_postal,
+              CILResponsable: sucursal.cil_responsable,
+              codigo: sucursal.id,
+              idCiudad: ciudad,
+              provincia: provincia,
+            })
+            .catch((err) => {
+              console.error('Error al agregar las sucursales.');
+              throw new Error(err);
+            });
+        } catch (error) {
+          console.log(error);
+          continue;
+        }
       }
       console.log('Se agregaron las sucursales.');
     }
@@ -559,6 +611,50 @@ export class DocumentsService {
       console.error(errorMsg);
       console.error(error);
     }
+    return updated;
+  }
+  /**
+   *
+   * @param {string[]} params Parámetros a evaluar
+   * @param {Request} event Request de la solicitud
+   * @return {boolean} Retorna true si se encuentran todos los parámetros
+   */
+  async checkParams(params: string[], event: Request): Promise<boolean> {
+    const reqParamList = Object.keys(JSON.parse(event.body).params);
+    const hasAllRequiredParams = params.every((param) =>
+      reqParamList.includes(param),
+    );
+    return hasAllRequiredParams;
+  }
+
+  /**
+   * Actualiza la ciudad o sucursal y establece si hay otro destinatario al documento indicado.
+   * @param {string} id - Id del documento
+   * @param {any} document - Objeto documento que contiene la ciudad y sucursal
+   * @param {any} client - Objeto cliente con la información del destinatario
+   * @return {boolean} Retorna true si fue actualizada el documneto
+   */
+  async updateDocument(
+    id: string,
+    document: any,
+    client: any,
+  ): Promise<boolean> {
+    let updated = false;
+    await this.db
+      .collection('documentos')
+      .doc(id)
+      .update({
+        idSucursalDestino: document.id_sucursal_destino,
+        idCiudadDestino: document.id_ciudad_destino,
+        otroDestinatario: client,
+      })
+      .then(() => {
+        updated = true;
+      })
+      .catch(() => {
+        console.error('Error al actualizar documento ' + id);
+        // addlogToGlide(1, 3, "Error al actualizar documento "+id, "" );
+      });
     return updated;
   }
 }

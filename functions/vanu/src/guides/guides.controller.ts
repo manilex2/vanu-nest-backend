@@ -92,7 +92,7 @@ export class GuidesController {
 
       this.guidesService.savePDFToFirebase(
         pdfBytes,
-        `${process.env.CDN_VANU}/vanu/manifiestos/MANIFEST-${fecha}.pdf`,
+        `vanu/manifiestos/MANIFEST-${fecha}.pdf`,
       );
 
       const url = `${process.env.CDN_VANU}/vanu/manifiestos/MANIFEST-${fecha}.pdf?alt=media`;

@@ -96,8 +96,8 @@ export class GuidesController {
         .send(pdfBytes);
     } catch (error) {
       res
-        .status(error.status)
-        .send({ error: `Hubo el siguiente error: ${error.response}` });
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .send({ error: `Hubo el siguiente error: ${error.response || error}` });
     }
   }
 
@@ -111,8 +111,8 @@ export class GuidesController {
         .send({ message: 'Guías generadas correctamente' });
     } catch (error) {
       res
-        .status(error.status)
-        .send({ error: `Hubo el siguiente error: ${error.response}` });
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .send({ error: `Hubo el siguiente error: ${error.response || error}` });
     }
   }
 
@@ -245,7 +245,9 @@ export class GuidesController {
       }
       res.status(HttpStatus.OK).send({ mensaje: 'Guía eliminada.' });
     } catch (error) {
-      res.status(error.status).send({ mensaje: error.message });
+      res
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .send({ mensaje: error.message || error });
     }
   }
 }

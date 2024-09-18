@@ -34,8 +34,8 @@ export class DocumentsController {
     } catch (err) {
       console.error(err);
       res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ mensaje: `Hubo un error: ${err}` });
+        .status(err.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .send({ mensaje: `Hubo un error: ${err.message || err}` });
     }
   }
 
@@ -132,7 +132,9 @@ export class DocumentsController {
         .send({ mensaje: 'Actualización de documento ' + id + ' éxitosa' });
     } catch (err) {
       console.error(err);
-      res.status(err.status).send({ mensaje: `Hubo un error: ${err.message}` });
+      res
+        .status(err.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .send({ mensaje: `Hubo un error: ${err.message || err}` });
     }
   }
 }

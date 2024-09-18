@@ -178,7 +178,7 @@ export class GuidesService {
       return;
     }
 
-    const url = `${process.env.CDN_VANU}/vanu/facturas/FAC-${document.documento}.pdf?alt=media`;
+    const url = `${process.env.CDN_VANU}/vanu%2Ffacturas%2FFAC-${document.documento}.pdf?alt=media`;
 
     const savedToDB = await this.savePDFToDB(document, url);
     if (!savedToDB) {

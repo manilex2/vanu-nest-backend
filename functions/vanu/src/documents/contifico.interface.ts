@@ -101,7 +101,7 @@ interface Cobros {
 }
 
 export interface Contifico {
-  ref: string | null;
+  ref: DocumentReference | null;
   id: string | null;
   pos: string | null;
   fecha_creacion: string | null;

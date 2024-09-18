@@ -1,8 +1,4 @@
 export interface ParamsDTO {
-  body: Body;
-}
-
-interface Body {
   id: string | null;
   id_ciudad: string | null;
   id_sucursal: string | null;

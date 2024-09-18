@@ -11,6 +11,9 @@ import { getStorage } from 'firebase-admin/storage';
 import axios, { AxiosResponse } from 'axios';
 import { renderFile } from 'ejs';
 import { createTransport, Transporter } from 'nodemailer';
+import { config } from 'dotenv';
+config();
+
 interface RowData {
   idCiudad?: string;
   nombreCiudad?: string;
@@ -106,7 +109,7 @@ export class GuidesService {
         for (const doc of documents) {
           delete doc['fechaEmision'];
           delete doc['fechaCreacion'];
-          const client: DocumentData | RowData = await this.getClient(doc);
+          const client: DocumentData = await this.getClient(doc);
 
           if (client != null || client.email != null) {
             const body: RequestJson = await this.updateRequestBody(
@@ -172,7 +175,7 @@ export class GuidesService {
       return;
     }
 
-    const url = `${process.env.CDN_COHETE_AZUL}/vanu/FAC-${document.id}.pdf`;
+    const url = `${process.env.CDN_VANU}/vanu/facturas/FAC-${document.documento}.pdf?alt=media`;
 
     const savedToDB = await this.savePDFToDB(document, url);
     if (!savedToDB) {
@@ -185,7 +188,7 @@ export class GuidesService {
     const paramsMail = {
       fecha: date,
       destinatario: requestJson['RAZON_SOCIAL_DESTI_NE'],
-      documento: document.id,
+      documento: document.personaId,
       guia: guia,
       direccion: requestJson['DIRECCION1_DESTINAT_NE'],
       ciudad: ciudad.nombre,
@@ -217,11 +220,11 @@ export class GuidesService {
     const lastNameClient: string =
       names.length == 4 ? names[2] + ' ' + names[3] : names[1];
 
-    const city: DocumentData = await this.commonService.getCity(
+    const city: DocumentData | null = await this.commonService.getCity(
       document.idCiudadDestino,
     );
     const sucursal: DocumentData | null =
-      document.idSucursalDestino != 0
+      'idSucursalDestino' in document && document.idSucursalDestino != null
         ? await this.commonService.getSucursal(document.idSucursalDestino)
         : null;
 
@@ -230,20 +233,18 @@ export class GuidesService {
       return null;
     }
 
-    if (sucursal == null && document.idSucursalDestino != 0) {
+    if (sucursal == null && 'idSucursalDestino' in document) {
       console.log('Error al obtener las sucursales');
       return null;
     }
 
     body['nombre_ciudad'] = city.nombre;
-
-    body['ID_CIUDAD_DESTINO'] = city.id;
+    body['ID_CIUDAD_DESTINO'] = city.codigo;
     body['DIRECCION1_DESTINAT_NE'] =
       sucursal != null
         ? `RETIRO EN CS ${city.nombre} - ${sucursal.direccion}`
         : client.direccion;
-
-    body['ID_DESTINATARIO_NE_CL'] = client.id;
+    body['ID_DESTINATARIO_NE_CL'] = client.personaId;
     body['RAZON_SOCIAL_DESTI_NE'] = client.razonSocial;
     body['NOMBRE_DESTINATARIO_NE'] = nameClient;
     body['APELLIDO_DESTINATAR_NE'] = lastNameClient;
@@ -264,7 +265,7 @@ export class GuidesService {
     body: RequestJson,
   ): Promise<number> {
     let idGuia: number | null = null;
-    idGuia = document.idGuia ? document.idGuia : null;
+    idGuia = 'idGuia' in document ? document.idGuia : null;
 
     if (idGuia == null) {
       await axios(process.env.SERVICLI_URI_GUIAS, {
@@ -274,7 +275,9 @@ export class GuidesService {
         },
         data: JSON.stringify(body),
       })
-        .then((res: AxiosResponse) => res.data)
+        .then((res: AxiosResponse) => {
+          return res.data;
+        })
         .then((data) => {
           if (data.id != 0) {
             idGuia = data.id;
@@ -315,14 +318,21 @@ export class GuidesService {
       document['idGuia'] = guia;
 
       try {
-        await this.db.doc(document.id).update({
-          estado: 2,
-          idGuia: guia,
-        });
-        const msg =
-          'Documento ' + document.id + ' actualizado con el id de la guía.';
-        console.log(msg);
-        existGuide = true;
+        await this.db
+          .doc(document.id)
+          .update({
+            estado: 2,
+            idGuia: guia,
+          })
+          .then(() => {
+            const msg =
+              'Documento ' + document.id + ' actualizado con el id de la guía.';
+            console.log(msg);
+            existGuide = true;
+          })
+          .catch((err) => {
+            throw new Error(err);
+          });
       } catch (error) {
         const errorMsg =
           'Error al actualizar documento ' +
@@ -348,7 +358,7 @@ export class GuidesService {
     document: DocumentData,
   ): Promise<Buffer | null> {
     let bufferValue: Buffer | null = null;
-    await fetch(
+    await axios(
       process.env.SERVICLI_URI_GUIAS_PDF +
         `['${guia}','${process.env.SERVICLI_AUTH_USER}',` +
         `'${process.env.SERVICLI_AUTH_PASS}','1']`,
@@ -356,11 +366,12 @@ export class GuidesService {
         method: 'GET',
       },
     )
-      .then((res) => res.json())
+      .then((res) => {
+        return res.data;
+      })
       .then((data) => {
-        if (data?.archivoEncriptado != null && data.archivoEncriptado != '') {
+        if (data.archivoEncriptado != null && data.archivoEncriptado != '') {
           bufferValue = Buffer.from(data.archivoEncriptado, 'base64');
-          // savePDFToS3(document, bufferValue, pool);
         } else {
           const errorMsg =
             'Error al obtener la guía en PDF del documento ' + document.id;
@@ -378,7 +389,7 @@ export class GuidesService {
 
   /**
    * Obtiene la lista de documentos que seran enviados a ServiCli.
-   * @return {Promise<object[]>} - Documentos selecionados
+   * @return {Promise<DocumentData[]>} - Documentos selecionados
    */
   async getDocuments(): Promise<DocumentData[]> {
     let docs: DocumentData[] | null = null;
@@ -400,9 +411,9 @@ export class GuidesService {
    * @param {DocumentData} document - Objeto documento
    * @return {DocumentData} Cliente encontrado o null.
    */
-  async getClient(document: DocumentData): Promise<DocumentData | RowData> {
-    let client: DocumentData | RowData | null = null;
-    if (document.otroDestinatario != null) {
+  async getClient(document: DocumentData): Promise<DocumentData> {
+    let client: DocumentData | null = null;
+    if ('otroDestinatario' in document && document.otroDestinatario != null) {
       client = document.otroDestinatario;
     } else {
       try {
@@ -447,14 +458,7 @@ export class GuidesService {
   ): Promise<boolean> {
     const storage = getStorage();
     const bucket = storage.bucket();
-    const params = {
-      Key: `vanu/FAC-${document.id}.pdf`,
-      Body: data,
-      Bucket: process.env.VANU_BUCKET,
-      ContentEncoding: 'base64',
-      ContentType: 'application/pdf',
-    };
-    const pdfPath = params.Key;
+    const pdfPath = `vanu/facturas/FAC-${document.documento}.pdf`;
 
     let hasError = false;
     let hasPDF = false;
@@ -493,7 +497,7 @@ export class GuidesService {
         .catch((err) => {
           const errorMsg =
             'Error al guardar en Firebase Storage pdf del documento ' +
-            document.id;
+            document.documento;
           console.error(errorMsg);
           console.error(err);
           hasError = true;
@@ -510,19 +514,26 @@ export class GuidesService {
    * @return {boolean} Si fue actualizado o no el documento.
    */
   async savePDFToDB(document: DocumentData, url: string): Promise<boolean> {
-    document['url_guia_pdf'] = url;
-    document['id_estado'] = 3;
+    document['urlGuiaPDF'] = url;
+    document['estado'] = 3;
 
     let updated = false;
 
     try {
-      this.db.doc(document.id).update({
-        urlGuiaPDF: url,
-        estado: 3,
-      });
-      const msg = 'Éxito al guardar la url del pdf de la guía en la base.';
-      console.log(msg);
-      updated = true;
+      this.db
+        .doc(document.id)
+        .update({
+          urlGuiaPDF: url,
+          estado: 3,
+        })
+        .then(() => {
+          const msg = 'Éxito al guardar la url del pdf de la guía en la base.';
+          console.log(msg);
+          updated = true;
+        })
+        .catch((err) => {
+          throw new Error(err);
+        });
     } catch (error) {
       const errorMsg =
         'Error al guardar la url del pdf del documento ' + document.id;

@@ -6,11 +6,15 @@ import {
   Res,
   Post,
   Body,
+  HttpException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { DocumentsService } from './documents.service';
 import { ParamsDTO } from './params.interface';
 import { CommonService } from 'src/common/common.service';
+import { config } from 'dotenv';
+
+config();
 
 @Controller('documents')
 export class DocumentsController {
@@ -20,7 +24,7 @@ export class DocumentsController {
   ) {}
 
   @Get('saveNewDocuments')
-  async saveNewDocuemnts(@Req() req: Request, @Res() res: Response) {
+  async saveNewDocuments(@Req() req: Request, @Res() res: Response) {
     try {
       await this.documentsService.insertSucursales();
       await this.documentsService.saveCities();
@@ -42,41 +46,35 @@ export class DocumentsController {
     @Body() parametros: ParamsDTO,
   ) {
     try {
-      req.body = JSON.parse(req.body);
       const hasParams = await this.documentsService.checkParams(
-        [
-          'id',
-          'id_ciudad',
-          'id_sucursal',
-          //"check",
-        ],
+        ['id', 'id_ciudad', 'id_sucursal'],
         req,
       );
 
       if (!hasParams) {
-        res.status(HttpStatus.BAD_REQUEST).send({
-          mensaje: 'Parametros requeridos: id, id_ciudad, id_sucursal, check',
-        });
+        throw new HttpException(
+          'Parametros requeridos: id, id_ciudad, id_sucursal',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
-      const params = parametros.body;
-
-      const id = params.id;
+      const id = parametros.id;
       const document = {
-        id_ciudad_destino: params.id_ciudad || null,
-        id_sucursal_destino: params.id_sucursal || null,
+        id_ciudad_destino: parametros.id_ciudad || null,
+        id_sucursal_destino: parametros.id_sucursal || null,
       };
 
       if (document.id_ciudad_destino == null && !document.id_ciudad_destino) {
-        res.status(HttpStatus.BAD_REQUEST).send({
-          mensaje: 'Ciudad de destino no puede ser 0 o nulo',
-        });
+        throw new HttpException(
+          'Ciudad de destino no puede ser nulo',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       let queryStatement = 'ciudad';
       let queryValues = [document.id_ciudad_destino];
 
-      if (document.id_sucursal_destino) {
+      if (document.id_sucursal_destino != null) {
         queryStatement = 'sucursal';
         queryValues = [
           document.id_ciudad_destino,
@@ -90,30 +88,30 @@ export class DocumentsController {
       );
 
       if (!existCity) {
-        res.status(HttpStatus.NOT_FOUND).send({
-          mensaje: '"No se pudo obtener la ciudad o sucursal especificada"',
-        });
+        throw new HttpException(
+          'No se pudo obtener la ciudad o sucursal especificada',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       let client = null;
       if (
-        params.id_cliente != null &&
-        params.razon_social != null &&
-        params.telefonos != null &&
-        params.direccion != null &&
-        params.tipo != null &&
-        params.email != null
+        parametros.id_cliente != null &&
+        parametros.razon_social != null &&
+        parametros.telefonos != null &&
+        parametros.direccion != null &&
+        parametros.tipo != null &&
+        parametros.email != null
       ) {
         client = {
-          id: params.id_cliente,
-          tipoId: params.tipo_id,
-          razonSocial: params.razon_social,
-          telefonos: params.telefonos,
-          direccion: params.direccion,
-          tipo: params.tipo,
-          email: params.email,
+          personaId: parametros.id_cliente,
+          tipoId: parametros.tipo_id,
+          razonSocial: parametros.razon_social,
+          telefonos: parametros.telefonos,
+          direccion: parametros.direccion,
+          tipo: parametros.tipo,
+          email: parametros.email,
         };
-        client = JSON.stringify(client);
       }
 
       const updatedDB = await this.documentsService.updateDocument(
@@ -123,9 +121,10 @@ export class DocumentsController {
       );
 
       if (!updatedDB) {
-        res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-          mensaje: 'Error al actualizar documento',
-        });
+        throw new HttpException(
+          'Error al actualizar documento',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       res
@@ -133,9 +132,7 @@ export class DocumentsController {
         .send({ mensaje: 'Actualización de documento ' + id + ' éxitosa' });
     } catch (err) {
       console.error(err);
-      res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ mensaje: `Hubo un error: ${err}` });
+      res.status(err.status).send({ mensaje: `Hubo un error: ${err.message}` });
     }
   }
 }

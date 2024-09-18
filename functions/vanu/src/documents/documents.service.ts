@@ -11,6 +11,9 @@ import {
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
 import { Request } from 'express';
+import { config } from 'dotenv';
+
+config();
 
 @Injectable()
 export class DocumentsService {
@@ -34,7 +37,9 @@ export class DocumentsService {
         headers: { Authorization: process.env.CONTIFICO_AUTH_TOKEN },
       },
     )
-      .then((res: AxiosResponse) => res.data)
+      .then((res: AxiosResponse) => {
+        return res.data;
+      })
       .then((data) => {
         // console.log("Obteniendo documentos");
         docs = data;
@@ -110,7 +115,7 @@ export class DocumentsService {
               .where('personaId', '==', cliente.id)
               .get()
           ).docs.map((client) => {
-            return client.data();
+            return client.ref;
           });
 
           const ciudadRef = (
@@ -119,7 +124,7 @@ export class DocumentsService {
               .where('codigo', '==', idCiudadDestino)
               .get()
           ).docs.map((ciudad) => {
-            return ciudad.data();
+            return ciudad.ref;
           });
 
           const sucursalRef = (
@@ -128,7 +133,7 @@ export class DocumentsService {
               .where('codigo', '==', idSucursalDestino)
               .get()
           ).docs.map((client) => {
-            return client.data();
+            return client.ref;
           });
 
           const document: DocumentosDB = {
@@ -139,11 +144,11 @@ export class DocumentsService {
             fechaCreacion: date,
             total: total,
             descripcion: doc.descripcion,
-            idCliente: clientRef[0].ref,
-            idCiudadDestino: ciudadRef[0].ref,
-            idSucursalDestino: sucursalRef[0].ref,
-            idGuia: '',
-            urlGuiaPDF: '',
+            idCliente: clientRef[0],
+            idCiudadDestino: ciudadRef[0],
+            idSucursalDestino: sucursalRef[0],
+            idGuia: null,
+            urlGuiaPDF: null,
             tipoDocumento: doc.tipo_documento,
             costoEnvio: costoEnvio,
             canalVenta: canalVenta,
@@ -160,9 +165,9 @@ export class DocumentsService {
               .where('documento', '==', doc.documento)
               .get()
           ).docs.map((document) => {
-            return document.data();
+            return document.ref;
           });
-          doc.ref = documentoRef[0].id;
+          doc.ref = documentoRef[0];
           await this.saveDetalles(doc);
         }
       }
@@ -179,12 +184,10 @@ export class DocumentsService {
       let hasError: boolean = false;
 
       try {
-        const documentRef = (await this.db.doc(doc.ref).get()).ref;
-
         const producto = (
           await this.db
             .collection('detalles_productos')
-            .where('idDocumento', '==', documentRef)
+            .where('idDocumento', '==', doc.ref)
             .where('idProducto', '==', detalle.producto_id)
             .where('nombre', '==', detalle.producto_nombre)
             .where('precio', '==', Number(detalle.precio))
@@ -205,7 +208,7 @@ export class DocumentsService {
         }
 
         if (!existDetalle) {
-          detalle['id_documento'] = documentRef;
+          detalle['id_documento'] = doc.ref;
           detalle['id_producto'] = detalle.producto_id;
           detalle['nombre'] = detalle.producto_nombre;
           detalle['precio'] = Number(detalle.precio);
@@ -434,30 +437,6 @@ export class DocumentsService {
    */
   async saveDocument(document: DocumentosDB): Promise<boolean> {
     let existDocument = false;
-    /*let hasError = false;
-
-    await pool.query("SELECT * FROM `"+process.env.DB_DATABASE+
-    "`.`documentos` WHERE id = ?", [
-        document.documento,
-    ])
-        .then((res) => {
-            if (res[0].length != 0) {
-                existDocument = true;
-            }
-        })
-        .catch((err) => {
-            hasError = true;
-            const errorMsg = "Error al buscar documentos de la base de datos";
-            console.error(errorMsg);
-            console.error(err);
-            // addlogToGlide(1, 1, errorMsg, err.toString());
-        });
-
-    if (hasError) {
-        return false;
-    }
-
-    if (!existDocument) {*/
     await this.db
       .collection('documentos')
       .add({
@@ -555,6 +534,7 @@ export class DocumentsService {
             direccion: cliente.direccion,
             tipo: cliente.tipo,
             email: cliente.email,
+            otroDestinatario: null,
           })
           .then(() => {
             existClient = true;
@@ -620,9 +600,9 @@ export class DocumentsService {
    * @return {boolean} Retorna true si se encuentran todos los parámetros
    */
   async checkParams(params: string[], event: Request): Promise<boolean> {
-    const reqParamList = Object.keys(JSON.parse(event.body).params);
+    const reqParamList = event.body;
     const hasAllRequiredParams = params.every((param) =>
-      reqParamList.includes(param),
+      reqParamList.hasOwnProperty(param),
     );
     return hasAllRequiredParams;
   }
@@ -632,7 +612,7 @@ export class DocumentsService {
    * @param {string} id - Id del documento
    * @param {any} document - Objeto documento que contiene la ciudad y sucursal
    * @param {any} client - Objeto cliente con la información del destinatario
-   * @return {boolean} Retorna true si fue actualizada el documneto
+   * @return {boolean} Retorna true si fue actualizada el documento
    */
   async updateDocument(
     id: string,

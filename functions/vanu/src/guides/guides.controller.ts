@@ -67,7 +67,7 @@ export class GuidesController {
         })
         .then((data) => {
           if (data.archivoEncriptado) {
-            pdfBytes = data.archivoEncriptado;
+            pdfBytes = Buffer.from(data.archivoEncriptado, 'base64');
           } else if (data.guia == 0) {
             response.body = data.mensaje;
             response.statusCode = HttpStatus.NOT_FOUND;
@@ -123,7 +123,6 @@ export class GuidesController {
     @Body() parametros: ParamsGuideDTO,
   ) {
     const db: FirebaseFirestore.Firestore = getFirestore();
-    req.body = JSON.parse(req.body);
     try {
       const hasParams: boolean = await this.guidesService.checkBodyParams(
         ['id', 'guia'],
@@ -131,14 +130,12 @@ export class GuidesController {
       );
       if (!hasParams) {
         throw new HttpException(
-          'Parametros requeridos: id, id_ciudad, id_sucursal, check',
+          'Parametros requeridos: id, guia',
           HttpStatus.BAD_REQUEST,
         );
       }
-
-      const params = parametros.body;
-      const guia = params.guia;
-      const id = params.id;
+      const guia = parametros.guia;
+      const id = parametros.id;
 
       let deleted = false;
       await axios(
@@ -149,7 +146,9 @@ export class GuidesController {
           method: 'DELETE',
         },
       )
-        .then((res) => res.data)
+        .then((res) => {
+          return res.data;
+        })
         .then((data) => {
           const msj = 'LA GUÍA FUE ANULADA CORRECTAMENTE';
           const msj2 = 'LA GUÍA YA SE ENCUENTRA ANULADA';

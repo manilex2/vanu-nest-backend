@@ -6,14 +6,6 @@ import {
   getFirestore,
 } from 'firebase-admin/firestore';
 
-import { md } from 'node-forge';
-
-interface RowData {
-  documento?: string;
-  docRef?: DocumentReference;
-  [key: string]: any; // Para permitir otras propiedades dinámicas
-}
-
 @Injectable()
 export class CommonService {
   db: Firestore = getFirestore();
@@ -47,39 +39,14 @@ export class CommonService {
   }
 
   /**
-   * Valida que los parametros no han sido alterados usando un Api Key
-   * y valor hash enviado como parametro
-   * de la petición.
-   * @param {RowData} values - Valores de evaluación
-   * * @param {string[]} params - Chequear si los parámetros son validos.
-   * @return {boolean} True si coincide el valor hash recibido con el que se crea
-   */
-  async validateParams(values: RowData, params: string[]): Promise<boolean> {
-    const sha256 = values.check.value;
-    let value = '';
-
-    params.forEach((k) => {
-      if (k != 'check') {
-        value += values[k].value;
-      }
-    });
-
-    value += process.env.VANU_API_KEY;
-    const mdRes = md.sha256.create();
-    mdRes.update(value);
-
-    return sha256 == mdRes.digest().toHex();
-  }
-
-  /**
    * Obtiene la sucursal especificando su id de la base de datos.
-   * @param {DocumentReference} docRef - Document Ref de la sucursal
+   * @param {DocumentReference} sucursalRef - Document Ref de la sucursal
    * @return {Promise<DocumentData>} Sucursal encontrada o null
    */
-  async getSucursal(docRef: DocumentReference): Promise<DocumentData> {
+  async getSucursal(sucursalRef: DocumentReference): Promise<DocumentData> {
     let sucursal: DocumentData | null = null;
     try {
-      sucursal = (await this.db.doc(docRef.id).get()).data();
+      sucursal = (await sucursalRef.get()).data();
     } catch (error) {
       console.error(error);
     }
@@ -88,13 +55,13 @@ export class CommonService {
 
   /**
    * Obtiene la ciudad especificando su id de la base de datos.
-   * @param {DocumentReference} docRef - Document Ref de la ciudad
+   * @param {DocumentReference} ciudadRef - Document Ref de la ciudad
    * @return {Promise<DocumentData>} La ciudad encontrada o null
    */
-  async getCity(docRef: DocumentReference): Promise<DocumentData> {
+  async getCity(ciudadRef: DocumentReference): Promise<DocumentData> {
     let city: DocumentData | null = null;
     try {
-      city = (await this.db.doc(docRef.id).get()).data();
+      city = (await ciudadRef.get()).data();
     } catch (error) {
       console.error(error);
     }
@@ -111,20 +78,13 @@ export class CommonService {
     queryStatement: string,
     queryValues: string[],
   ): Promise<boolean> {
-    let data: boolean | number;
-    let exist = false;
+    let exist: boolean = false;
     switch (queryStatement) {
       case 'ciudad':
-        data = (await this.db.doc(queryValues[0]).get()).exists;
-        if (data) {
-          exist = true;
-        }
+        exist = (await this.db.doc(queryValues[0]).get()).exists;
         break;
       case 'sucursal':
-        data = (await this.db.doc(queryValues[1]).get()).exists;
-        if (data) {
-          exist = true;
-        }
+        exist = (await this.db.doc(queryValues[1]).get()).exists;
       default:
         break;
     }
@@ -137,8 +97,8 @@ export class CommonService {
    * @return {boolean | null} - True si existe
    */
   async checkDocument(documentoId: string): Promise<boolean | null> {
-    let existDocument = false;
-    let hasError = false;
+    let existDocument: boolean = false;
+    let hasError: boolean = false;
     try {
       existDocument =
         (

@@ -169,7 +169,10 @@ export class GuidesService {
       return;
     }
 
-    const existPdf = await this.savePDFToFirebase(document, bufferPdf);
+    const existPdf = await this.savePDFToFirebase(
+      bufferPdf,
+      `vanu/facturas/FAC-${document.documento}.pdf`,
+    );
 
     if (!existPdf) {
       return;
@@ -448,17 +451,13 @@ export class GuidesService {
 
   /**
    * Guarda el pdf en un bucket de AWS.
-   * @param {DocumentData} document - Objeto documento
    * @param {Buffer} data - Buffer que contiene el pdf
+   * @param {string} pdfPath - Ruta completa del pdf
    * @return {boolean} - True si se ha guardado o ya éxiste el pdf en S3.
    */
-  async savePDFToFirebase(
-    document: DocumentData,
-    data: Buffer,
-  ): Promise<boolean> {
+  async savePDFToFirebase(data: Buffer, pdfPath: string): Promise<boolean> {
     const storage = getStorage();
     const bucket = storage.bucket();
-    const pdfPath = `vanu/facturas/FAC-${document.documento}.pdf`;
 
     let hasError = false;
     let hasPDF = false;
@@ -495,9 +494,7 @@ export class GuidesService {
           hasPDF = true;
         })
         .catch((err) => {
-          const errorMsg =
-            'Error al guardar en Firebase Storage pdf del documento ' +
-            document.documento;
+          const errorMsg = 'Error al guardar en Firebase Storage el pdf';
           console.error(errorMsg);
           console.error(err);
           hasError = true;

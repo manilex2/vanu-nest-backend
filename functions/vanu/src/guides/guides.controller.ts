@@ -56,7 +56,7 @@ export class GuidesController {
         );
       }
 
-      let pdfBytes = null;
+      let pdfBytes: Buffer | null = null;
       const axiosConfig: AxiosRequestConfig = {
         method: 'get',
         url: `${process.env.SERVICLI_URI_MANIFEST}['${fecha}','${process.env.SERVICLI_AUTH_USER}','${process.env.SERVICLI_AUTH_PASS}','T']`,
@@ -90,14 +90,21 @@ export class GuidesController {
         throw new HttpException(response.body, response.statusCode);
       }
 
+      this.guidesService.savePDFToFirebase(
+        pdfBytes,
+        `${process.env.CDN_VANU}/vanu/manifiestos/MANIFEST-${fecha}.pdf`,
+      );
+
+      const url = `${process.env.CDN_VANU}/vanu/manifiestos/MANIFEST-${fecha}.pdf?alt=media`;
+
       res
         .status(HttpStatus.OK)
-        .setHeader('Content-Type', 'application/pdf')
-        .send(pdfBytes);
+        .setHeader('Content-Type', 'application/json')
+        .send({ message: url });
     } catch (error) {
-      res
-        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ error: `Hubo el siguiente error: ${error.response || error}` });
+      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${error.response || error}`,
+      });
     }
   }
 
@@ -110,9 +117,9 @@ export class GuidesController {
         .setHeader('Content-Type', 'application/json')
         .send({ message: 'Guías generadas correctamente' });
     } catch (error) {
-      res
-        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ error: `Hubo el siguiente error: ${error.response || error}` });
+      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${error.response || error}`,
+      });
     }
   }
 
@@ -243,11 +250,11 @@ export class GuidesController {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-      res.status(HttpStatus.OK).send({ mensaje: 'Guía eliminada.' });
+      res.status(HttpStatus.OK).send({ message: 'Guía eliminada.' });
     } catch (error) {
       res
         .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ mensaje: error.message || error });
+        .send({ message: error.message || error });
     }
   }
 }

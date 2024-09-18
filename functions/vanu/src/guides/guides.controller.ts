@@ -95,7 +95,7 @@ export class GuidesController {
         `vanu/manifiestos/MANIFEST-${fecha}.pdf`,
       );
 
-      const url = `${process.env.CDN_VANU}/vanu/manifiestos/MANIFEST-${fecha}.pdf?alt=media`;
+      const url = `${process.env.CDN_VANU}/vanu%2Fmanifiestos%2FMANIFEST-${fecha}.pdf?alt=media`;
 
       res
         .status(HttpStatus.OK)

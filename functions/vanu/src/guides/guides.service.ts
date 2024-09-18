@@ -465,8 +465,19 @@ export class GuidesService {
     await bucket
       .file(pdfPath)
       .exists()
-      .then(([exists]) => {
-        if (exists) {
+      .then(async ([exists]) => {
+        if (exists && pdfPath.startsWith('vanu/manifiestos')) {
+          await bucket
+            .file(pdfPath)
+            .delete()
+            .catch((err) => {
+              console.error(
+                'Error al eliminar Pdf de Manifiesto en Firebase Storage',
+              );
+              console.error(err);
+              hasError = true;
+            });
+        } else if (exists) {
           hasPDF = true;
         }
       })

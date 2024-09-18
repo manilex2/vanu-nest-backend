@@ -61,9 +61,9 @@ export class GuidesService {
    * @return {boolean} Retorna true si los parámetros requeridos concuerdan con los que vienen en el Request.
    */
   async checkBodyParams(params: string[], req: Request): Promise<boolean> {
-    const reqParamList: string[] = Object.keys(req.body.params);
+    const reqParamList = req.body;
     const hasAllRequiredParams: boolean = params.every((param) =>
-      reqParamList.includes(param),
+      reqParamList.hasOwnProperty(param),
     );
     return hasAllRequiredParams;
   }

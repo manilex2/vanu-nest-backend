@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <style>
+        /* Tabla que contiene la imagen */
+        #table-img {
+            border: 0;
+        }
+
+        .border-0 {
+            border: 0;
+        }
+
+        .align-center {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .img-title {
+            display: block;
+            border: none;
+            outline: none;
+            text-decoration: none
+        }
+
+        .bg-f2f2f2{
+            background-color: #F2F2F2;
+        }
+
+        .bg-f6f4f5{
+            background-color: #f6f4f5;
+        }
+
+        .bg-cb4c7c{
+            background-color: #cb4c7c;
+        }
+
+        .bg-ffffff{
+            background-color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <table id="table-img" width="100%" cellpadding="0" cellspacing="0" class="bg-f2f2f2">
+        <tbody>
+            <tr>
+                <td>
+                    <table width="550" cellpadding="0" cellspacing="0" class="border-0 align-center">
+                        <tbody>
+                            <tr>
+                                <td width="100%">
+                                    <table width="550" cellspacing="0" cellpadding="0" class="border-0 align-center">
+                                        <tbody>
+                                            <tr>
+                                                <td class="align-center">
+                                                    <div>
+                                                        <a><img width="550" class="border-0" height="114"
+                                                                alt="Banner de Vanu" src="<%= banner %>"></a>
+                                                    </div>
+                                                </td>
+
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table id="table-body" width="100%" class="bg-f2f2f2 border-0" cellpadding="0" cellspacing="0">
+        <tbody>
+            <tr>
+                <td>
+                    <table width="550" cellpadding="0" cellspacing="0" class="border-0 align-center">
+                        <tbody>
+                            <tr>
+                                <td width="100%" class="bg-f6f4f5" style="padding:20px">
+                                    <table width="510" class="align-center border-0" cellspacing="0" cellpadding="0">
+                                        <tbody>
+                                            <tr>
+                                                <td align="left" class="bg-ffffff"
+                                                    style="font-family:Arial,sans-serif;color:#333333;font-size:12px;padding-top:0px;padding-right:30px;padding-left:30px;padding-bottom:0px;text-align:left;line-height:22px">
+                                                    Hola <strong><%= nombre %></strong><br/>
+                                                    Su contraseña ha sido reestablecida correctamente en Vanu. <br/>
+                                                    Su contraseña provisional: <b><%= clave %></b><br/>
+                                                    Al iniciar sesión se le solicitará cambiar la contraseña.<br/><br/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td align="left" class="bg-ffffff"
+                                                    style="font-family:Arial,sans-serif;color:#333333;font-size:12px;padding-top:20px;padding-right:30px;padding-left:30px;padding-bottom:40px;text-align:justify;line-height:16px">
+                                                    Puede ingresar a través del siguiente link:<br>
+                                                    <strong><a href="<%= link %>" style="text-decoration: none"><%= app %></a></strong><br><br>
+                                                    <br><br>
+                                                    
+                                                    Gracias &#x1F338; <br><br>
+                                                    
+                                                    Atentamente,<br> 
+                                                    <strong><span class="il">El equipo de <%= app %></span></strong>
+                                                </td>
+
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+
+</html>

@@ -99,7 +99,7 @@ export class AuthService {
         await this.db.doc(user.id).update(usuarioDB);
         const send = await this.sendMail(
           {
-            destinatario: usuario.display_name,
+            destinatario: user.nombre,
             email_destinatario: usuario.email,
             vanu_name: 'Vanu App',
             vanu_url: `https://vanu-coh-az-knifgq.flutterflow.app?email=${user.email}&displayName=${user.nombre}&token=${token}`,

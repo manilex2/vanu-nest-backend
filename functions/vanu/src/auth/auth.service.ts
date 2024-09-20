@@ -153,6 +153,7 @@ export class AuthService {
         id: users[0].id,
         password: `${clave}`,
         token: users[0].tokenReset,
+        nombre: users[0].display_name,
       };
       if (usuario.token != user.token) {
         throw new HttpException(
@@ -179,10 +180,10 @@ export class AuthService {
             tokenReset: null,
             firstLogin: true,
           };
-          await this.db.doc(users[0].id).update(usuarioDB);
+          await this.db.doc(user.id).update(usuarioDB);
           const send = await this.sendMail(
             {
-              destinatario: usuario.display_name,
+              destinatario: user.nombre,
               email_destinatario: usuario.email,
               vanu_name: 'Vanu App',
               vanu_url: 'https://vanu-coh-az-knifgq.flutterflow.app',

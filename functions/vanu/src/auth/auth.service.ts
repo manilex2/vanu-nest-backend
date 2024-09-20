@@ -102,7 +102,7 @@ export class AuthService {
             destinatario: user.nombre,
             email_destinatario: usuario.email,
             vanu_name: 'Vanu App',
-            vanu_url: `https://vanu-coh-az-knifgq.flutterflow.app?email=${user.email}&displayName=${user.nombre}&token=${token}`,
+            vanu_url: `https://vanu-coh-az-knifgq.flutterflow.app?email=${user.email}&token=${token}`,
           },
           'resetPassword',
         );

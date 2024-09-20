@@ -500,8 +500,9 @@ export class GuidesService {
         .save(data, {
           contentType: 'application/pdf',
         })
-        .then(() => {
+        .then(async () => {
           console.log('Éxito al guardar pdf en Firebase Storage.');
+          await bucket.file(pdfPath).makePublic();
           hasPDF = true;
         })
         .catch((err) => {

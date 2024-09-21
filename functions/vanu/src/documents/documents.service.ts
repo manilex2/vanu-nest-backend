@@ -296,6 +296,9 @@ export class DocumentsService {
       ).docs.map((ciudad) => {
         return ciudad.ref;
       });
+      if (ciudades.length < 1) {
+        continue;
+      }
       ciudad = ciudades[0];
       await ciudad
         .update({

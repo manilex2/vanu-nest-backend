@@ -9,10 +9,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { config } from 'dotenv';
 import { Usuario } from './auth.interface';
-
-config();
 
 @Controller('auth')
 export class AuthController {

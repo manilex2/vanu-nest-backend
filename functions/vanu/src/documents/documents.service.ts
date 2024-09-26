@@ -11,13 +11,14 @@ import {
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
 import { Request } from 'express';
-import { config } from 'dotenv';
-
-config();
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class DocumentsService {
-  constructor(private commonService: CommonService) {}
+  constructor(
+    private commonService: CommonService,
+    private configService: ConfigService,
+  ) {}
 
   db: Firestore = getFirestore();
 
@@ -29,12 +30,14 @@ export class DocumentsService {
     date = new Date(date - 5 * 1000 * 60 * 60);
     let docs: Contifico[] | null;
     await axios(
-      process.env.CONTIFICO_URI_DOCUMENT +
+      this.configService.get<string>('CONTIFICO_URI_DOCUMENT') +
         '?tipo_registro=CLI&fecha_emision=' +
         date.toLocaleDateString('en-GB'),
       {
         method: 'GET',
-        headers: { Authorization: process.env.CONTIFICO_AUTH_TOKEN },
+        headers: {
+          Authorization: this.configService.get<string>('CONTIFICO_AUTH_TOKEN'),
+        },
       },
     )
       .then((res: AxiosResponse) => {
@@ -268,11 +271,11 @@ export class DocumentsService {
     let ciudad: DocumentReference;
 
     await axios(
-      process.env.SERVICLI_URI_CIUDADES +
+      this.configService.get<string>('SERVICLI_URI_CIUDADES') +
         "['" +
-        process.env.SERVICLI_AUTH_USER +
+        this.configService.get<string>('SERVICLI_AUTH_USER') +
         "','" +
-        process.env.SERVICLI_AUTH_PASS +
+        this.configService.get<string>('SERVICLI_AUTH_PASS') +
         "']",
     )
       .then((res) => {

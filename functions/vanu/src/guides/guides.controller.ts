@@ -11,18 +11,17 @@ import {
 import { Request, Response } from 'express';
 import { GuidesService } from './guides.service';
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
-import { config } from 'dotenv';
 import { CommonService } from '../common/common.service';
 import { DocumentData, getFirestore } from 'firebase-admin/firestore';
 import { ParamsGuideDTO } from './paramsGuide.interface';
-
-config();
+import { ConfigService } from '@nestjs/config';
 
 @Controller('guides')
 export class GuidesController {
   constructor(
     private guidesService: GuidesService,
     private commonService: CommonService,
+    private configService: ConfigService,
   ) {}
 
   @Get('manifiesto')
@@ -59,7 +58,7 @@ export class GuidesController {
       let pdfBytes: Buffer | null = null;
       const axiosConfig: AxiosRequestConfig = {
         method: 'get',
-        url: `${process.env.SERVICLI_URI_MANIFEST}['${fecha}','${process.env.SERVICLI_AUTH_USER}','${process.env.SERVICLI_AUTH_PASS}','T']`,
+        url: `${this.configService.get<string>('SERVICLI_URI_MANIFEST')}['${fecha}','${this.configService.get<string>('SERVICLI_AUTH_USER')}','${this.configService.get<string>('SERVICLI_AUTH_PASS')}','T']`,
       };
       await axios(axiosConfig)
         .then((res: AxiosResponse) => {
@@ -95,7 +94,7 @@ export class GuidesController {
         `vanu/manifiestos/MANIFEST-${fecha}.pdf`,
       );
 
-      const url = `${process.env.CDN_VANU}/vanu%2Fmanifiestos%2FMANIFEST-${fecha}.pdf?alt=media`;
+      const url = `${this.configService.get<string>('CDN_VANU')}/vanu%2Fmanifiestos%2FMANIFEST-${fecha}.pdf?alt=media`;
 
       res
         .status(HttpStatus.OK)
@@ -146,9 +145,9 @@ export class GuidesController {
 
       let deleted = false;
       await axios(
-        process.env.SERVICLI_URI_GUIAS +
-          `['${guia}','${process.env.SERVICLI_AUTH_USER}'` +
-          `,'${process.env.SERVICLI_AUTH_PASS}']`,
+        this.configService.get<string>('SERVICLI_URI_GUIAS') +
+          `['${guia}','${this.configService.get<string>('SERVICLI_AUTH_USER')}'` +
+          `,'${this.configService.get<string>('SERVICLI_AUTH_PASS')}']`,
         {
           method: 'DELETE',
         },

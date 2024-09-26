@@ -3,11 +3,10 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { renderFile } from 'ejs';
 import { createTransport, Transporter } from 'nodemailer';
-import { config } from 'dotenv';
 import { genSalt } from 'bcrypt';
 import { Usuario } from './auth.interface';
 import { sign, verify } from 'jsonwebtoken';
-config();
+import { ConfigService } from '@nestjs/config';
 
 interface ParamsEmail {
   destinatario: string;
@@ -19,7 +18,7 @@ interface ParamsEmail {
 
 @Injectable()
 export class AuthService {
-  constructor() {}
+  constructor(private configService: ConfigService) {}
 
   db: FirebaseFirestore.Firestore = getFirestore();
 
@@ -91,7 +90,9 @@ export class AuthService {
         email: usuario.email,
         nombre: users[0].display_name,
       };
-      const token = sign(user, process.env.SECRET_JWT, { expiresIn: '1h' });
+      const token = sign(user, this.configService.get<string>('SECRET_JWT'), {
+        expiresIn: '1h',
+      });
       try {
         const usuarioDB = {
           tokenReset: token,
@@ -162,7 +163,7 @@ export class AuthService {
         );
       }
       try {
-        verify(user.token, process.env.SECRET_JWT);
+        verify(user.token, this.configService.get<string>('SECRET_JWT'));
       } catch (err) {
         console.error('Invalid token');
         throw new HttpException(
@@ -311,17 +312,17 @@ export class AuthService {
     let hasSendedEmail: boolean = false;
     // create reusable transporter object using the default SMTP transport
     const transporter: Transporter = createTransport({
-      host: process.env.MAIL_HOST,
+      host: this.configService.get<string>('MAIL_HOST'),
       secure: true, // true for 465, false for other ports
       auth: {
-        user: process.env.MAIL_USER, // generated ethereal user
-        pass: process.env.MAIL_PASS, // generated ethereal password
+        user: this.configService.get<string>('MAIL_USER'), // generated ethereal user
+        pass: this.configService.get<string>('MAIL_PASS'), // generated ethereal password
       },
     });
     const contextMail: object =
       proceso == 'signUp'
         ? {
-            banner: process.env.VANU_BANNER_MAIL,
+            banner: this.configService.get<string>('VANU_BANNER_MAIL'),
             app: params.vanu_name,
             link: params.vanu_url,
             nombre: params.destinatario,
@@ -330,14 +331,14 @@ export class AuthService {
           }
         : proceso == 'confirmResetPassword'
           ? {
-              banner: process.env.VANU_BANNER_MAIL,
+              banner: this.configService.get<string>('VANU_BANNER_MAIL'),
               app: params.vanu_name,
               link: params.vanu_url,
               nombre: params.destinatario,
               clave: params.clave,
             }
           : {
-              banner: process.env.VANU_BANNER_MAIL,
+              banner: this.configService.get<string>('VANU_BANNER_MAIL'),
               app: params.vanu_name,
               link: params.vanu_url,
               nombre: params.destinatario,
@@ -361,7 +362,7 @@ export class AuthService {
     // send mail with defined transport object
     await transporter
       .sendMail({
-        from: `"Vanu" <${process.env.MAIL_USER}>`,
+        from: `"Vanu" <${this.configService.get<string>('MAIL_USER')}>`,
         to: `"${params.destinatario}" <${params.email_destinatario}>`,
         subject:
           proceso == 'signUp'

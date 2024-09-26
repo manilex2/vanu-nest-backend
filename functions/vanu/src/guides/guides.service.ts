@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Request } from 'express';
-import { RequestJson, requestJson } from './request.interface';
+import { RequestJson } from './request.interface';
 import { CommonService } from '../common/common.service';
 import {
   DocumentData,
@@ -11,8 +11,8 @@ import { getStorage } from 'firebase-admin/storage';
 import axios, { AxiosResponse } from 'axios';
 import { renderFile } from 'ejs';
 import { createTransport, Transporter } from 'nodemailer';
-import { config } from 'dotenv';
-config();
+import { ConfigService } from '@nestjs/config';
+import { Guides } from './guides';
 
 interface RowData {
   idCiudad?: string;
@@ -34,9 +34,14 @@ interface ParamsEmail {
 
 @Injectable()
 export class GuidesService {
-  constructor(private commonService: CommonService) {}
+  constructor(
+    private commonService: CommonService,
+    private configService: ConfigService,
+    private guides: Guides,
+  ) {}
 
   db: FirebaseFirestore.Firestore = getFirestore();
+  requestJson = this.guides.getRequestJson();
   /**
    * Valida si vienen todos los parametros necesarios.
    * @param {string[]} params - Parámetros requeridos.
@@ -115,7 +120,7 @@ export class GuidesService {
             const body: RequestJson = await this.updateRequestBody(
               client,
               doc,
-              requestJson,
+              this.requestJson,
             );
 
             const ciudad: RowData = {
@@ -178,7 +183,7 @@ export class GuidesService {
       return;
     }
 
-    const url = `${process.env.CDN_VANU}/vanu%2Ffacturas%2FFAC-${document.documento}.pdf?alt=media`;
+    const url = `${this.configService.get<string>('CDN_VANU')}/vanu%2Ffacturas%2FFAC-${document.documento}.pdf?alt=media`;
 
     const savedToDB = await this.savePDFToDB(document, url);
     if (!savedToDB) {
@@ -190,12 +195,12 @@ export class GuidesService {
 
     const paramsMail = {
       fecha: date,
-      destinatario: requestJson['RAZON_SOCIAL_DESTI_NE'],
+      destinatario: this.requestJson['RAZON_SOCIAL_DESTI_NE'],
       documento: document.personaId,
       guia: guia,
-      direccion: requestJson['DIRECCION1_DESTINAT_NE'],
+      direccion: this.requestJson['DIRECCION1_DESTINAT_NE'],
       ciudad: ciudad.nombre,
-      contenido: requestJson['CONTENIDO'],
+      contenido: this.requestJson['CONTENIDO'],
       total: document.total,
       email_destinatario: cliente.email,
     };
@@ -271,7 +276,7 @@ export class GuidesService {
     idGuia = 'idGuia' in document ? document.idGuia : null;
 
     if (idGuia == null) {
-      await axios(process.env.SERVICLI_URI_GUIAS, {
+      await axios(this.configService.get<string>('SERVICLI_URI_GUIAS'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -362,9 +367,9 @@ export class GuidesService {
   ): Promise<Buffer | null> {
     let bufferValue: Buffer | null = null;
     await axios(
-      process.env.SERVICLI_URI_GUIAS_PDF +
-        `['${guia}','${process.env.SERVICLI_AUTH_USER}',` +
-        `'${process.env.SERVICLI_AUTH_PASS}','1']`,
+      this.configService.get<string>('SERVICLI_URI_GUIAS_PDF') +
+        `['${guia}','${this.configService.get<string>('SERVICLI_AUTH_USER')}',` +
+        `'${this.configService.get<string>('SERVICLI_AUTH_PASS')}','1']`,
       {
         method: 'GET',
       },
@@ -562,15 +567,15 @@ export class GuidesService {
     let hasSendedEmail: boolean = false;
     // create reusable transporter object using the default SMTP transport
     const transporter: Transporter = createTransport({
-      host: process.env.MAIL_HOST,
+      host: this.configService.get<string>('MAIL_HOST'),
       secure: true, // true for 465, false for other ports
       auth: {
-        user: process.env.MAIL_USER, // generated ethereal user
-        pass: process.env.MAIL_PASS, // generated ethereal password
+        user: this.configService.get<string>('MAIL_USER'), // generated ethereal user
+        pass: this.configService.get<string>('MAIL_PASS'), // generated ethereal password
       },
     });
     const contextMail: object = {
-      banner: process.env.VANU_BANNER_MAIL,
+      banner: this.configService.get<string>('VANU_BANNER_MAIL'),
       fecha: params.fecha
         .toLocaleDateString('es-ES', {
           weekday: 'long',
@@ -590,8 +595,9 @@ export class GuidesService {
         contenido: params.contenido,
         total: '$' + params.total,
       },
-      url_tracking: process.env.SERVICLI_URI_TRACKING + params.guia,
-      contacto: process.env.REMITENTE_TELEFONO,
+      url_tracking:
+        this.configService.get<string>('SERVICLI_URI_TRACKING') + params.guia,
+      contacto: this.configService.get<string>('REMITENTE_TELEFONO'),
     };
     const html = await renderFile(
       './views/mail_send_guide_template.ejs',
@@ -601,7 +607,7 @@ export class GuidesService {
     // send mail with defined transport object
     await transporter
       .sendMail({
-        from: `"Vanu" <${process.env.MAIL_USER}>`,
+        from: `"Vanu" <${this.configService.get<string>('MAIL_USER')}>`,
         to: `"${params.destinatario}" <${params.email_destinatario}>`,
         subject: 'Registro de Pedido',
         html: html,
@@ -611,7 +617,7 @@ export class GuidesService {
             contentType: 'application/pdf',
             encoding: 'base64',
             path:
-              process.env.CDN_COHETE_AZUL +
+              this.configService.get<string>('CDN_COHETE_AZUL') +
               '/vanu/FAC-' +
               params.documento +
               '.pdf',

@@ -12,9 +12,6 @@ import { Request, Response } from 'express';
 import { DocumentsService } from './documents.service';
 import { ParamsDTO } from './params.interface';
 import { CommonService } from 'src/common/common.service';
-import { config } from 'dotenv';
-
-config();
 
 @Controller('documents')
 export class DocumentsController {

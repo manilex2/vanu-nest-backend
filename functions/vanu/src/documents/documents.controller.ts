@@ -29,10 +29,22 @@ export class DocumentsController {
       await this.documentsService.saveDocuments();
       res.status(HttpStatus.OK).send({ mensaje: 'Documentos guardados' });
     } catch (err) {
-      console.error(err);
+      if (err instanceof HttpException) {
+        console.log(JSON.stringify(err.message));
+        res
+          .status(err.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${err.message}`,
+          });
+      }
+      console.log(JSON.stringify(err));
       res
-        .status(err.status || HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ mensaje: `Hubo un error: ${err.message || err}` });
+        .status(err.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
+        });
     }
   }
 
@@ -126,12 +138,25 @@ export class DocumentsController {
 
       res
         .status(HttpStatus.OK)
+        .setHeader('Content-Type', 'application/json')
         .send({ mensaje: 'Actualización de documento ' + id + ' éxitosa' });
     } catch (err) {
-      console.error(err);
+      if (err instanceof HttpException) {
+        console.log(JSON.stringify(err.message));
+        res
+          .status(err.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${err.message}`,
+          });
+      }
+      console.log(JSON.stringify(err));
       res
-        .status(err.status || HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ mensaje: `Hubo un error: ${err.message || err}` });
+        .status(err.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
+        });
     }
   }
 }

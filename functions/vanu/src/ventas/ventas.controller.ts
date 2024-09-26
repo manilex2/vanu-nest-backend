@@ -22,6 +22,7 @@ export class VentasController {
         .send({ message: mensaje });
     } catch (error) {
       if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
         res
           .status(error.getStatus())
           .setHeader('Content-Type', 'application/json')
@@ -29,9 +30,13 @@ export class VentasController {
             message: `Hubo el siguiente error: ${error.message}`,
           });
       }
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-        message: `Hubo un error interno en el servidor.`,
-      });
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 }

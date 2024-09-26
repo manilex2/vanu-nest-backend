@@ -6,6 +6,7 @@ import {
   Post,
   Body,
   Put,
+  HttpException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -28,9 +29,22 @@ export class AuthController {
         .setHeader('Content-Type', 'application/json')
         .send({ message: user });
     } catch (error) {
-      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
-        message: `Hubo el siguiente error: ${error.message || error}`,
-      });
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 
@@ -47,9 +61,22 @@ export class AuthController {
         .setHeader('Content-Type', 'application/json')
         .send({ message: reset });
     } catch (error) {
-      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
-        message: `Hubo el siguiente error: ${error.message || error}`,
-      });
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 
@@ -66,9 +93,22 @@ export class AuthController {
         .setHeader('Content-Type', 'application/json')
         .send({ message: reset });
     } catch (error) {
-      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
-        message: `Hubo el siguiente error: ${error.message || error}`,
-      });
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 
@@ -85,9 +125,22 @@ export class AuthController {
         .setHeader('Content-Type', 'application/json')
         .send({ message: change });
     } catch (error) {
-      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
-        message: `Hubo el siguiente error: ${error.message || error}`,
-      });
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 }

@@ -101,9 +101,22 @@ export class GuidesController {
         .setHeader('Content-Type', 'application/json')
         .send({ message: url });
     } catch (error) {
-      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
-        message: `Hubo el siguiente error: ${error.response || error}`,
-      });
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 
@@ -116,9 +129,22 @@ export class GuidesController {
         .setHeader('Content-Type', 'application/json')
         .send({ message: 'Guías generadas correctamente' });
     } catch (error) {
-      res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).send({
-        message: `Hubo el siguiente error: ${error.response || error}`,
-      });
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 
@@ -249,11 +275,27 @@ export class GuidesController {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-      res.status(HttpStatus.OK).send({ message: 'Guía eliminada.' });
-    } catch (error) {
       res
-        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
-        .send({ message: error.message || error });
+        .status(HttpStatus.OK)
+        .setHeader('Content-Type', 'application/json')
+        .send({ message: 'Guía eliminada.' });
+    } catch (error) {
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
     }
   }
 }

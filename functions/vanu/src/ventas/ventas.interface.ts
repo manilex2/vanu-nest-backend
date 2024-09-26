@@ -5,10 +5,11 @@ export interface VentasData {
   envios: number;
   clientesAtendidos: number;
   pedidos: number;
-  principalesDestinos: Record<string, number>;
-  tiposEnvio: {
-    agencia: number;
-    domicilio: number;
-  };
-  canalesVenta: Record<string, { total: number; totalMoney: number }>;
+  principalesDestinos: Array<{ destino: string; total: number }>;
+  tiposEnvio: { agencia: number; domicilio: number };
+  canalesVenta: Array<{
+    canal: string;
+    total: number;
+    totalMoney: number;
+  }>;
 }

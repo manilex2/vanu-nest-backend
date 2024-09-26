@@ -12,7 +12,6 @@ export class VentasService {
   private db = getFirestore();
   private ventasCollection = this.db.collection('ventas');
   private documentosCollection = this.db.collection('documentos');
-  private ciudadesCollection = this.db.collection('ciudades');
 
   async actualizarVentasDelAnio(): Promise<string> {
     // Obtener la fecha actual para el año y el mes actuales
@@ -56,9 +55,9 @@ export class VentasService {
             envios: 0,
             clientesAtendidos: 0,
             pedidos: 0,
-            principalesDestinos: {},
+            principalesDestinos: [],
             tiposEnvio: { agencia: 0, domicilio: 0 },
-            canalesVenta: {},
+            canalesVenta: [],
           };
         }
 
@@ -73,15 +72,22 @@ export class VentasService {
 
         // Actualizar principales destinos
         if (doc.idCiudadDestino) {
-          const ciudadRef = this.ciudadesCollection.doc(doc.idCiudadDestino);
+          const ciudadRef = doc.idCiudadDestino;
           const ciudadSnapshot = await ciudadRef.get();
           const ciudadData = ciudadSnapshot.data();
           const ciudadNombre = ciudadData?.nombre || 'Desconocido';
 
-          if (!venta.principalesDestinos[ciudadNombre]) {
-            venta.principalesDestinos[ciudadNombre] = 0;
+          const destinoIndex = venta.principalesDestinos.findIndex(
+            (destino) => destino.destino === ciudadNombre,
+          );
+
+          if (destinoIndex === -1) {
+            // Si no existe el destino, lo agregamos
+            venta.principalesDestinos.push({ destino: ciudadNombre, total: 1 });
+          } else {
+            // Si ya existe, solo incrementamos el total
+            venta.principalesDestinos[destinoIndex].total += 1;
           }
-          venta.principalesDestinos[ciudadNombre] += 1;
         }
 
         // Actualizar tipos de envío
@@ -91,13 +97,23 @@ export class VentasService {
           venta.tiposEnvio.domicilio += 1;
         }
 
-        // Actualizar canales de venta
         const canal = doc.canalVenta || 'Desconocido';
-        if (!venta.canalesVenta[canal]) {
-          venta.canalesVenta[canal] = { total: 0, totalMoney: 0 };
+        const canalIndex = venta.canalesVenta.findIndex(
+          (c) => c.canal === canal,
+        );
+
+        if (canalIndex === -1) {
+          // Si no existe, agregar nuevo canal
+          venta.canalesVenta.push({
+            canal,
+            total: 1,
+            totalMoney: doc.total || 0,
+          });
+        } else {
+          // Si existe, solo actualizar el total y el totalMoney
+          venta.canalesVenta[canalIndex].total += 1;
+          venta.canalesVenta[canalIndex].totalMoney += doc.total || 0;
         }
-        venta.canalesVenta[canal].total += 1;
-        venta.canalesVenta[canal].totalMoney += doc.total || 0;
       }
 
       // Guardar o actualizar los resultados en la colección "ventas"
@@ -123,8 +139,8 @@ export class VentasService {
             envios: data.envios,
             clientesAtendidos: data.clientesAtendidos,
             pedidos: data.pedidos,
-            principalesDestinos: Object.entries(data.principalesDestinos).map(
-              ([destino, total]) => ({
+            principalesDestinos: data.principalesDestinos.map(
+              ({ destino, total }) => ({
                 destino,
                 total,
               }),
@@ -136,9 +152,9 @@ export class VentasService {
                 total: data.tiposEnvio.domicilio,
               },
             ],
-            canalesVenta: Object.entries(data.canalesVenta).map(
-              ([canal, { total, totalMoney }]) => ({
-                canal,
+            canalesVenta: data.canalesVenta.map(
+              ({ canal, total, totalMoney }) => ({
+                canal, // canal como valor del objeto
                 total,
                 totalMoney,
               }),
@@ -156,8 +172,8 @@ export class VentasService {
             envios: data.envios,
             clientesAtendidos: data.clientesAtendidos,
             pedidos: data.pedidos,
-            principalesDestinos: Object.entries(data.principalesDestinos).map(
-              ([destino, total]) => ({
+            principalesDestinos: data.principalesDestinos.map(
+              ({ destino, total }) => ({
                 destino,
                 total,
               }),
@@ -169,9 +185,9 @@ export class VentasService {
                 total: data.tiposEnvio.domicilio,
               },
             ],
-            canalesVenta: Object.entries(data.canalesVenta).map(
-              ([canal, { total, totalMoney }]) => ({
-                canal,
+            canalesVenta: data.canalesVenta.map(
+              ({ canal, total, totalMoney }) => ({
+                canal, // canal como valor del objeto
                 total,
                 totalMoney,
               }),

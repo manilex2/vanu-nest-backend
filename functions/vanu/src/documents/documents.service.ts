@@ -8,6 +8,7 @@ import {
   DocumentReference,
   Firestore,
   getFirestore,
+  Timestamp,
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
 import { Request } from 'express';
@@ -48,6 +49,9 @@ export class DocumentsService {
         docs = data;
       })
       .catch((err) => console.error(err));
+    if (docs.length < 1) {
+      console.log('No hay documentos para agregar');
+    }
     for (const doc of docs) {
       if (
         (doc.tipo_documento == 'FAC' && doc.electronico) ||
@@ -75,10 +79,10 @@ export class DocumentsService {
           cliente['id'] = cliente.cedula || cliente.ruc;
           cliente['tipo_id'] = cliente.id.length == 10 ? 'CEDULA' : 'RUC';
           cliente['email'] = cliente.email.split(' ')[0];
-          let idCiudadDestino: DocumentReference | number | null = 0;
-          let idSucursalDestino: DocumentReference | number | null = 0;
+          let idCiudadDestino: DocumentReference | number | null = null;
+          let idSucursalDestino: DocumentReference | number | null = null;
           const total = Number(doc.total);
-          let fechaEmision = null;
+          let fechaEmision: any = null;
           if (doc.fecha_emision.split('/').length == 3) {
             fechaEmision = doc.fecha_emision.split('/');
             fechaEmision = new Date(
@@ -124,7 +128,7 @@ export class DocumentsService {
           const ciudadRef = (
             await this.db
               .collection('ciudades')
-              .where('codigo', '==', idCiudadDestino)
+              .where('codigo', '==', Number(idCiudadDestino))
               .get()
           ).docs.map((ciudad) => {
             return ciudad.ref;
@@ -133,10 +137,10 @@ export class DocumentsService {
           const sucursalRef = (
             await this.db
               .collection('sucursales')
-              .where('codigo', '==', idSucursalDestino)
+              .where('codigo', '==', Number(idSucursalDestino))
               .get()
-          ).docs.map((client) => {
-            return client.ref;
+          ).docs.map((sucursal) => {
+            return sucursal.ref;
           });
 
           const document: DocumentosDB = {
@@ -149,7 +153,10 @@ export class DocumentsService {
             descripcion: doc.descripcion,
             idCliente: clientRef[0],
             idCiudadDestino: ciudadRef[0],
-            idSucursalDestino: sucursalRef[0],
+            idSucursalDestino:
+              idSucursalDestino != null && idSucursalDestino != 0
+                ? sucursalRef[0]
+                : null,
             idGuia: null,
             urlGuiaPDF: null,
             tipoDocumento: doc.tipo_documento,
@@ -200,7 +207,7 @@ export class DocumentsService {
               '==',
               Number(detalle.porcentaje_descuento),
             )
-            .where('porcentajeIVA', '==', detalle.porcentaje_iva)
+            .where('porcentajeIVA', '==', Number(detalle.porcentaje_iva))
             .get()
         ).docs.map((product) => {
           return product.data();
@@ -219,6 +226,7 @@ export class DocumentsService {
           detalle['porcentaje_descuento'] = Number(
             detalle.porcentaje_descuento,
           );
+          detalle['porcentaje_iva'] = Number(detalle.porcentaje_iva);
 
           delete detalle.producto_id;
           delete detalle.producto_nombre;
@@ -270,6 +278,15 @@ export class DocumentsService {
     let cities: string | any[];
     let ciudad: DocumentReference;
 
+    const citiesWithOutName: number = (
+      await this.db.collection('ciudades').where('nombre', '==', null).get()
+    ).docs.length;
+
+    if (citiesWithOutName == 0) {
+      console.log('No hay ciudades para actualizar');
+      return;
+    }
+
     await axios(
       this.configService.get<string>('SERVICLI_URI_CIUDADES') +
         "['" +
@@ -294,7 +311,7 @@ export class DocumentsService {
       const ciudades = (
         await this.db
           .collection('ciudades')
-          .where('codigo', '==', city.id)
+          .where('codigo', '==', Number(city.id))
           .get()
       ).docs.map((ciudad) => {
         return ciudad.ref;
@@ -329,7 +346,7 @@ export class DocumentsService {
           estadoNumber: 1,
         })
         .catch((err) => {
-          console.error('Error al insertar ciudades');
+          console.error('Error al insertar estados de documentos');
           throw err;
         });
       await this.db
@@ -339,7 +356,7 @@ export class DocumentsService {
           estadoNumber: 2,
         })
         .catch((err) => {
-          console.error('Error al insertar ciudades');
+          console.error('Error al insertar estados de documentos');
           throw err;
         });
       await this.db
@@ -349,10 +366,22 @@ export class DocumentsService {
           estadoNumber: 3,
         })
         .catch((err) => {
-          console.error('Error al insertar ciudades');
+          console.error('Error al insertar estados de documentos');
+          throw err;
+        });
+      await this.db
+        .collection('estado_documento')
+        .add({
+          nombre: 'Eliminado',
+          estadoNumber: 4,
+        })
+        .catch((err) => {
+          console.error('Error al insertar estados de documentos');
           throw err;
         });
       console.log('Estados de documento guardados');
+    } else {
+      console.log('No hay estados de documento por guardar.');
     }
   }
 
@@ -361,8 +390,8 @@ export class DocumentsService {
    */
   async insertSucursales() {
     const res = (await this.db.collection('sucursales').get()).docs;
-    let ciudad: DocumentReference;
-    let provincia: DocumentReference;
+    let ciudad: DocumentReference | void;
+    let provincia: DocumentReference | void;
 
     if (res != null && res.length == 0) {
       for (const sucursal of sucursales) {
@@ -379,16 +408,22 @@ export class DocumentsService {
           if (provincias.length > 0) {
             provincia = provincias[0];
           } else {
-            provincia = this.db.collection('provincias').doc();
-            await provincia.create({
-              nombre: sucursal.provincia,
-            });
+            provincia = await this.db
+              .collection('provincias')
+              .add({
+                nombre: sucursal.provincia,
+              })
+              .catch((err) => {
+                console.error(
+                  `No pudo agregar la provincia de nombre ${sucursal.provincia} por: ${err}`,
+                );
+              });
           }
 
           const ciudades = (
             await this.db
               .collection('ciudades')
-              .where('codigo', '==', sucursal.id_ciudad)
+              .where('codigo', '==', Number(sucursal.id_ciudad))
               .get()
           ).docs.map((ciudad) => {
             return ciudad.ref;
@@ -397,11 +432,17 @@ export class DocumentsService {
           if (ciudades.length > 0) {
             ciudad = ciudades[0];
           } else {
-            ciudad = this.db.collection('ciudades').doc();
-            await ciudad.create({
-              codigo: sucursal.id_ciudad,
-              provincia: provincia,
-            });
+            ciudad = await this.db
+              .collection('ciudades')
+              .add({
+                codigo: Number(sucursal.id_ciudad) || null,
+                provincia: provincia,
+              })
+              .catch((err) => {
+                console.error(
+                  `No pudo agregar la ciudad de codigo ${sucursal.id_ciudad} por: ${err}`,
+                );
+              });
           }
 
           await this.db
@@ -410,29 +451,37 @@ export class DocumentsService {
               tipoCS: sucursal.tipo_cs,
               CS: sucursal.cs,
               direccion: sucursal.direccion,
-              sector: sucursal.sector,
+              sector: sucursal.sector == 'null' ? null : sucursal.sector,
               telefono: sucursal.telefono,
               horaPromedioEntregaOficina:
-                sucursal.hora_promedio_entrega_oficina,
+                sucursal.hora_promedio_entrega_oficina == 'null'
+                  ? null
+                  : sucursal.hora_promedio_entrega_oficina,
               horarioLaboral: sucursal.horario_laboral,
-              horarioFinSemana: sucursal.horario_fin_semana,
+              horarioFinSemana:
+                sucursal.horario_fin_semana == 'null'
+                  ? null
+                  : sucursal.horario_fin_semana,
               email: sucursal.email,
               codigoPostal: sucursal.codigo_postal,
               CILResponsable: sucursal.cil_responsable,
-              codigo: sucursal.id,
+              codigo: Number(sucursal.id) || null,
               idCiudad: ciudad,
               provincia: provincia,
             })
             .catch((err) => {
-              console.error('Error al agregar las sucursales.');
-              throw new Error(err);
+              console.error(
+                `No pudo agregar la sucursal de codigo ${sucursal.id} por: ${err}`,
+              );
             });
         } catch (error) {
           console.log(error);
           continue;
         }
       }
-      console.log('Se agregaron las sucursales.');
+      console.log('Sucursales, ciudades y provincias agregadas correctamente');
+    } else {
+      console.log('No hay sucursales por agregar');
     }
   }
 
@@ -448,8 +497,8 @@ export class DocumentsService {
       .add({
         estado: document.estado,
         urlRide: document.urlRide,
-        fechaEmision: document.fechaEmision,
-        fechaCreacion: document.fechaCreacion,
+        fechaEmision: Timestamp.fromDate(document.fechaEmision),
+        fechaCreacion: Timestamp.fromDate(document.fechaCreacion),
         total: document.total,
         descripcion: document.descripcion,
         idCliente: document.idCliente,

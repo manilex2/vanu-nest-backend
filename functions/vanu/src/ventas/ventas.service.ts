@@ -9,6 +9,7 @@ import { VentasData } from './ventas.interface';
 
 @Injectable()
 export class VentasService {
+  constructor() {}
   private db = getFirestore();
   private ventasCollection = this.db.collection('ventas');
   private documentosCollection = this.db.collection('documentos');
@@ -36,11 +37,14 @@ export class VentasService {
       const documentos = documentosSnapshot.docs.map((doc) => doc.data());
 
       if (documentos.length === 0) {
-        return 'No hay documentos para actualizar';
+        return 'No hay documentos para actualizar las ventas';
       }
 
       // Definir la estructura de ventasData utilizando la interfaz
-      const ventasData: Record<string, VentasData> = {};
+      const ventasData: Record<
+        string,
+        VentasData & { clientesUnicos: Set<string> }
+      > = {};
 
       for (const doc of documentos) {
         const fechaEmision = doc.fechaEmision.toDate();
@@ -58,6 +62,7 @@ export class VentasService {
             principalesDestinos: [],
             tiposEnvio: { agencia: 0, domicilio: 0 },
             canalesVenta: [],
+            clientesUnicos: new Set(), // Inicializa el Set para clientes únicos
           };
         }
 
@@ -67,8 +72,13 @@ export class VentasService {
         venta.ventasEnvios += (doc.total || 0) + (doc.costoEnvio || 0);
 
         if (doc.costoEnvio) venta.envios += 1;
-        if (doc.idCliente) venta.clientesAtendidos += 1;
         venta.pedidos += 1;
+
+        // Verificar si el cliente ya ha sido contado
+        if (doc.idCliente && !venta.clientesUnicos.has(doc.idCliente)) {
+          venta.clientesAtendidos += 1; // Solo suma si es un cliente único
+          venta.clientesUnicos.add(doc.idCliente); // Agrega el cliente al Set
+        }
 
         // Actualizar principales destinos
         if (doc.idCiudadDestino) {
@@ -202,6 +212,45 @@ export class VentasService {
       return 'Ventas actualizadas exitosamente';
     } catch (error) {
       console.log(error);
+      if (error instanceof FirebaseFirestoreError) {
+        throw new HttpException(
+          `Hubo el siguiente error ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+      throw new HttpException(
+        `Hubo el siguiente error ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async actualizarMesAnioInst(): Promise<string> {
+    const institutionRef = (
+      await this.db.collection('institution').get()
+    ).docs.map((inst) => {
+      return inst.ref;
+    });
+
+    // Obtener el mes y año actual
+    const fechaActual = new Date();
+    const mesActual = fechaActual.getMonth() + 1; // Los meses en JavaScript son base 0, así que sumamos 1
+    const anioActual = fechaActual.getFullYear();
+
+    // Actualizar el documento
+    try {
+      await institutionRef[0]
+        .update({
+          mes: mesActual,
+          anio: anioActual,
+        })
+        .catch((err) => {
+          throw new HttpException(err, HttpStatus.INTERNAL_SERVER_ERROR);
+        });
+      console.log('Registro de institución actualizado correctamente');
+      return 'Se actualizo correctamente el mes y año de la institución';
+    } catch (error) {
+      console.error('Error actualizando el registro:', error);
       if (error instanceof FirebaseFirestoreError) {
         throw new HttpException(
           `Hubo el siguiente error ${error.message}`,

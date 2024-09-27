@@ -39,4 +39,35 @@ export class VentasController {
         });
     }
   }
+
+  @Get('actualizarInstitutionMesAnio')
+  async actualizarInstitutionMesAnio(
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    try {
+      const mensaje = await this.ventasService.actualizarMesAnioInst();
+      res
+        .status(HttpStatus.OK)
+        .setHeader('Content-Type', 'application/json')
+        .send({ message: mensaje });
+    } catch (error) {
+      if (error instanceof HttpException) {
+        console.log(JSON.stringify(error.message));
+        res
+          .status(error.getStatus())
+          .setHeader('Content-Type', 'application/json')
+          .send({
+            message: `Hubo el siguiente error: ${error.message}`,
+          });
+      }
+      console.log(JSON.stringify(error));
+      res
+        .status(error.status)
+        .setHeader('Content-Type', 'application/json')
+        .send({
+          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+        });
+    }
+  }
 }

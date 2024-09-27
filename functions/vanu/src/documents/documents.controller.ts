@@ -27,7 +27,7 @@ export class DocumentsController {
       await this.documentsService.saveCities();
       await this.documentsService.saveStatusDocument();
       await this.documentsService.saveDocuments();
-      res.status(HttpStatus.OK).send({ mensaje: 'Documentos guardados' });
+      res.status(HttpStatus.OK).send({ message: 'Documentos guardados' });
     } catch (err) {
       if (err instanceof HttpException) {
         console.log(JSON.stringify(err.message));
@@ -139,7 +139,7 @@ export class DocumentsController {
       res
         .status(HttpStatus.OK)
         .setHeader('Content-Type', 'application/json')
-        .send({ mensaje: 'Actualización de documento ' + id + ' éxitosa' });
+        .send({ message: 'Actualización de documento ' + id + ' éxitosa' });
     } catch (err) {
       if (err instanceof HttpException) {
         console.log(JSON.stringify(err.message));

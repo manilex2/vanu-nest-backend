@@ -241,7 +241,7 @@ export class GuidesService {
       return null;
     }
 
-    if (sucursal == null && 'idSucursalDestino' in document) {
+    if (sucursal == null && document.id_sucursal_destino != null) {
       console.log('Error al obtener las sucursales');
       return null;
     }
@@ -534,7 +534,7 @@ export class GuidesService {
     let updated = false;
 
     try {
-      this.db
+      await this.db
         .doc(document.id)
         .update({
           urlGuiaPDF: url,

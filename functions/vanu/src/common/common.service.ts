@@ -39,11 +39,13 @@ export class CommonService {
   }
 
   /**
-   * Obtiene la sucursal especificando su id de la base de datos.
+   * Obtiene la sucursal especificando su ref de la base de datos.
    * @param {DocumentReference} sucursalRef - Document Ref de la sucursal
-   * @return {Promise<DocumentData>} Sucursal encontrada o null
+   * @return {Promise<DocumentData | null>} Sucursal encontrada o null
    */
-  async getSucursal(sucursalRef: DocumentReference): Promise<DocumentData> {
+  async getSucursal(
+    sucursalRef: DocumentReference,
+  ): Promise<DocumentData | null> {
     let sucursal: DocumentData | null = null;
     try {
       sucursal = (await sucursalRef.get()).data();
@@ -56,7 +58,7 @@ export class CommonService {
   /**
    * Obtiene la ciudad especificando su id de la base de datos.
    * @param {DocumentReference} ciudadRef - Document Ref de la ciudad
-   * @return {Promise<DocumentData>} La ciudad encontrada o null
+   * @return {Promise<DocumentData> | null} La ciudad encontrada o null
    */
   async getCity(ciudadRef: DocumentReference): Promise<DocumentData> {
     let city: DocumentData | null = null;

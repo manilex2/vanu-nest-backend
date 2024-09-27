@@ -63,6 +63,21 @@
         "npm --prefix \"$RESOURCE_DIR\" run lint"
       ],
       "runtime": "nodejs20"
+    },
+    {
+      "source": "functions/updateInstMesAnio",
+      "codebase": "update-inst-mes-anio",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ],
+      "runtime": "nodejs20"
     }
   ]
 }

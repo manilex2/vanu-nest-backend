@@ -28,7 +28,7 @@ export class DocumentsService {
    */
   async saveDocuments() {
     let date: number | Date = Date.now();
-    date = new Date(date - 24 * 1000 * 60 * 60);
+    date = new Date(date - 5 * 1000 * 60 * 60);
     let docs: Contifico[] | null;
     try {
       await axios(

@@ -4,9 +4,9 @@ import {
   Get,
   Req,
   Res,
-  Post,
   Body,
   HttpException,
+  Put,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { DocumentsService } from './documents.service';
@@ -27,28 +27,25 @@ export class DocumentsController {
       await this.documentsService.saveCities();
       await this.documentsService.saveStatusDocument();
       await this.documentsService.saveDocuments();
-      res.status(HttpStatus.OK).send({ message: 'Documentos guardados' });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.CREATED).send({ message: 'Documentos guardados' });
     } catch (err) {
       if (err instanceof HttpException) {
         console.log(JSON.stringify(err.message));
-        res
-          .status(err.getStatus())
-          .setHeader('Content-Type', 'application/json')
-          .send({
-            message: `Hubo el siguiente error: ${err.message}`,
-          });
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(err.getStatus()).send({
+          message: `Hubo el siguiente error: ${err.message}`,
+        });
       }
       console.log(JSON.stringify(err));
-      res
-        .status(err.status)
-        .setHeader('Content-Type', 'application/json')
-        .send({
-          message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
-        });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
+      });
     }
   }
 
-  @Post('updateDocumentCity')
+  @Put('updateDocumentCity')
   async updateDocumentCity(
     @Req() req: Request,
     @Res() res: Response,
@@ -56,24 +53,29 @@ export class DocumentsController {
   ) {
     try {
       const hasParams = await this.documentsService.checkParams(
-        ['id', 'id_ciudad', 'id_sucursal'],
-        req,
+        ['id', 'id_ciudad'],
+        parametros,
       );
 
       if (!hasParams) {
         throw new HttpException(
-          'Parametros requeridos: id, id_ciudad, id_sucursal',
+          'Parametros requeridos: id, id_ciudad',
           HttpStatus.BAD_REQUEST,
         );
       }
 
       const id = parametros.id;
       const document = {
-        id_ciudad_destino: parametros.id_ciudad || null,
-        id_sucursal_destino: parametros.id_sucursal || null,
+        idCiudadDestino: parametros.id_ciudad || null,
+        idSucursalDestino: parametros.id_sucursal || null,
+        costoEnvio: parametros.costo_envio || null,
+        tipoId:
+          parametros.id_cliente && parametros.id_cliente.length == 10
+            ? 'CEDULA'
+            : 'RUC',
       };
 
-      if (document.id_ciudad_destino == null && !document.id_ciudad_destino) {
+      if (!document.idCiudadDestino) {
         throw new HttpException(
           'Ciudad de destino no puede ser nulo',
           HttpStatus.BAD_REQUEST,
@@ -81,14 +83,11 @@ export class DocumentsController {
       }
 
       let queryStatement = 'ciudad';
-      let queryValues = [document.id_ciudad_destino];
+      let queryValues = [document.idCiudadDestino];
 
-      if (document.id_sucursal_destino != null) {
+      if (document.idSucursalDestino != null) {
         queryStatement = 'sucursal';
-        queryValues = [
-          document.id_ciudad_destino,
-          document.id_sucursal_destino,
-        ];
+        queryValues = [document.idCiudadDestino, document.idSucursalDestino];
       }
 
       const existCity = await this.commonService.checkCities(
@@ -114,7 +113,6 @@ export class DocumentsController {
       ) {
         client = {
           personaId: parametros.id_cliente,
-          tipoId: parametros.tipo_id,
           razonSocial: parametros.razon_social,
           telefonos: parametros.telefonos,
           direccion: parametros.direccion,
@@ -136,27 +134,23 @@ export class DocumentsController {
         );
       }
 
+      res.setHeader('Content-Type', 'application/json');
       res
         .status(HttpStatus.OK)
-        .setHeader('Content-Type', 'application/json')
         .send({ message: 'Actualización de documento ' + id + ' éxitosa' });
     } catch (err) {
       if (err instanceof HttpException) {
         console.log(JSON.stringify(err.message));
-        res
-          .status(err.getStatus())
-          .setHeader('Content-Type', 'application/json')
-          .send({
-            message: `Hubo el siguiente error: ${err.message}`,
-          });
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(err.getStatus()).send({
+          message: `Hubo el siguiente error: ${err.message}`,
+        });
       }
       console.log(JSON.stringify(err));
-      res
-        .status(err.status)
-        .setHeader('Content-Type', 'application/json')
-        .send({
-          message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
-        });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
+      });
     }
   }
 }

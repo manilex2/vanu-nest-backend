@@ -5,15 +5,15 @@ import {
   Res,
   HttpStatus,
   HttpException,
-  Post,
-  Body,
+  Delete,
+  Query,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { GuidesService } from './guides.service';
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 import { CommonService } from '../common/common.service';
 import { DocumentData, getFirestore } from 'firebase-admin/firestore';
-import { ParamsGuideDTO } from './paramsGuide.interface';
+import { ParamsGuideDTO, ParamsManifiestoDTO } from './paramsGuide.interface';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('guides')
@@ -25,20 +25,21 @@ export class GuidesController {
   ) {}
 
   @Get('manifiesto')
-  async getGuidesManifest(@Req() req: Request, @Res() res: Response) {
+  async getGuidesManifest(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query() date: ParamsManifiestoDTO,
+  ) {
     try {
-      const hasParams = await this.guidesService.checkParams(['fecha'], req);
+      const hasParams = await this.guidesService.checkParams(['fecha'], date);
       if (!hasParams) {
         throw new HttpException(
           'Parametros requeridos: fecha',
           HttpStatus.BAD_REQUEST,
         );
       }
-
-      const params = req.query;
-      let fecha = params.fecha.toString();
+      let fecha = date.fecha.toString();
       fecha = this.guidesService.validateDate(fecha);
-
       const response = {
         statusCode: 400,
         headers: {
@@ -97,26 +98,22 @@ export class GuidesController {
       const url = `${this.configService.get<string>('CDN_VANU')}/vanu%2Fmanifiestos%2FMANIFEST-${fecha}.pdf?alt=media`;
 
       res
-        .status(HttpStatus.OK)
         .setHeader('Content-Type', 'application/json')
+        .status(HttpStatus.OK)
         .send({ message: url });
     } catch (error) {
       if (error instanceof HttpException) {
         console.log(JSON.stringify(error.message));
-        res
-          .status(error.getStatus())
-          .setHeader('Content-Type', 'application/json')
-          .send({
-            message: `Hubo el siguiente error: ${error.message}`,
-          });
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(error.getStatus()).send({
+          message: `Hubo el siguiente error: ${error.message}`,
+        });
       }
       console.log(JSON.stringify(error));
-      res
-        .status(error.status)
-        .setHeader('Content-Type', 'application/json')
-        .send({
-          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
-        });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+      });
     }
   }
 
@@ -124,41 +121,37 @@ export class GuidesController {
   async generateGuideServiCli(@Req() req: Request, @Res() res: Response) {
     try {
       await this.guidesService.sendDocuments();
+      res.setHeader('Content-Type', 'application/json');
       res
         .status(HttpStatus.OK)
-        .setHeader('Content-Type', 'application/json')
         .send({ message: 'Guías generadas correctamente' });
     } catch (error) {
       if (error instanceof HttpException) {
         console.log(JSON.stringify(error.message));
-        res
-          .status(error.getStatus())
-          .setHeader('Content-Type', 'application/json')
-          .send({
-            message: `Hubo el siguiente error: ${error.message}`,
-          });
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(error.getStatus()).send({
+          message: `Hubo el siguiente error: ${error.message}`,
+        });
       }
       console.log(JSON.stringify(error));
-      res
-        .status(error.status)
-        .setHeader('Content-Type', 'application/json')
-        .send({
-          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
-        });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+      });
     }
   }
 
-  @Post('deleteGuide')
+  @Delete('deleteGuide')
   async deleteguide(
     @Req() req: Request,
     @Res() res: Response,
-    @Body() parametros: ParamsGuideDTO,
+    @Query() parametros: ParamsGuideDTO,
   ) {
     const db: FirebaseFirestore.Firestore = getFirestore();
     try {
-      const hasParams: boolean = await this.guidesService.checkBodyParams(
+      const hasParams: boolean = await this.guidesService.checkQueryParams(
         ['id', 'guia'],
-        req,
+        parametros,
       );
       if (!hasParams) {
         throw new HttpException(
@@ -168,6 +161,13 @@ export class GuidesController {
       }
       const guia = parametros.guia;
       const id = parametros.id;
+
+      if (guia == null || id == null) {
+        throw new HttpException(
+          'Parametros requeridos no pueden ser null: id, guia',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
       let deleted = false;
       await axios(
@@ -275,27 +275,21 @@ export class GuidesController {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-      res
-        .status(HttpStatus.OK)
-        .setHeader('Content-Type', 'application/json')
-        .send({ message: 'Guía eliminada.' });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.NO_CONTENT).send();
     } catch (error) {
       if (error instanceof HttpException) {
         console.log(JSON.stringify(error.message));
-        res
-          .status(error.getStatus())
-          .setHeader('Content-Type', 'application/json')
-          .send({
-            message: `Hubo el siguiente error: ${error.message}`,
-          });
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(error.getStatus()).send({
+          message: `Hubo el siguiente error: ${error.message}`,
+        });
       }
       console.log(JSON.stringify(error));
-      res
-        .status(error.status)
-        .setHeader('Content-Type', 'application/json')
-        .send({
-          message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
-        });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${JSON.stringify(error)}`,
+      });
     }
   }
 }

@@ -9,4 +9,5 @@ export interface ParamsDTO {
   tipo: string | null;
   email: string | null;
   tipo_id: string | null;
+  costo_envio: number | null;
 }

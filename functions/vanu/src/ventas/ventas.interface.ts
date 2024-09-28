@@ -6,7 +6,7 @@ export interface VentasData {
   clientesAtendidos: number;
   pedidos: number;
   principalesDestinos: Array<{ destino: string; total: number }>;
-  tiposEnvio: { agencia: number; domicilio: number };
+  tiposEnvio: { agencia: number; domicilio: number; desconocido: number };
   canalesVenta: Array<{
     canal: string;
     total: number;

@@ -1,5 +1,4 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Request } from 'express';
 import { RequestJson } from './request.interface';
 import { CommonService } from '../common/common.service';
 import {
@@ -13,6 +12,7 @@ import { renderFile } from 'ejs';
 import { createTransport, Transporter } from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
 import { Guides } from './guides';
+import { ParamsGuideDTO, ParamsManifiestoDTO } from './paramsGuide.interface';
 
 interface RowData {
   idCiudad?: string;
@@ -45,12 +45,15 @@ export class GuidesService {
   /**
    * Valida si vienen todos los parametros necesarios.
    * @param {string[]} params - Parámetros requeridos.
-   * @param {Request} req - Request traido de la consulta HTTP.
+   * @param {ParamsManifiestoDTO} query - Query traido de la consulta HTTP.
    * @return {boolean} Retorna true si los parámetros requeridos concuerdan con los que vienen en el Request.
    */
-  async checkParams(params: string[], req: Request): Promise<boolean> {
-    if (req.query) {
-      const reqParamList: string[] = Object.keys(req.query);
+  async checkParams(
+    params: string[],
+    query: ParamsManifiestoDTO,
+  ): Promise<boolean> {
+    if (query) {
+      const reqParamList: string[] = Object.keys(query);
       const hasAllRequiredParams: boolean = params.every((param) =>
         reqParamList.includes(param),
       );
@@ -62,11 +65,14 @@ export class GuidesService {
   /**
    * Valida si vienen todos los parametros necesarios en el body.
    * @param {string[]} params - Parámetros requeridos.
-   * @param {Request} req - Request traido de la consulta HTTP.
+   * @param {ParamsGuideDTO} query - Query traido de la consulta HTTP.
    * @return {boolean} Retorna true si los parámetros requeridos concuerdan con los que vienen en el Request.
    */
-  async checkBodyParams(params: string[], req: Request): Promise<boolean> {
-    const reqParamList = req.body;
+  async checkQueryParams(
+    params: string[],
+    query: ParamsGuideDTO,
+  ): Promise<boolean> {
+    const reqParamList: string[] = Object.keys(query);
     const hasAllRequiredParams: boolean = params.every((param) =>
       reqParamList.hasOwnProperty(param),
     );
@@ -241,7 +247,7 @@ export class GuidesService {
       return null;
     }
 
-    if (sucursal == null && document.id_sucursal_destino != null) {
+    if (sucursal == null && document.idSucursalDestino != null) {
       console.log('Error al obtener las sucursales');
       return null;
     }

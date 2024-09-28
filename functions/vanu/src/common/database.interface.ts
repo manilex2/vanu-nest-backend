@@ -25,7 +25,7 @@ export interface ClienteDB {
   id?: string;
   tipoId?: string;
   razonSocial?: string;
-  telefonos: string;
+  telefonos: string[];
   direccion: string;
   tipo: string;
   email: string;

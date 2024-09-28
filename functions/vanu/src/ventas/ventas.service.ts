@@ -60,7 +60,7 @@ export class VentasService {
             clientesAtendidos: 0,
             pedidos: 0,
             principalesDestinos: [],
-            tiposEnvio: { agencia: 0, domicilio: 0 },
+            tiposEnvio: { agencia: 0, domicilio: 0, desconocido: 0 },
             canalesVenta: [],
             clientesUnicos: new Set(), // Inicializa el Set para clientes únicos
           };
@@ -71,7 +71,7 @@ export class VentasService {
         venta.totalEnvios += doc.costoEnvio || 0;
         venta.ventasEnvios += (doc.total || 0) + (doc.costoEnvio || 0);
 
-        if (doc.costoEnvio) venta.envios += 1;
+        if (doc.costoEnvio || doc.costoEnvio != 0) venta.envios += 1;
         venta.pedidos += 1;
 
         // Verificar si el cliente ya ha sido contado
@@ -103,8 +103,10 @@ export class VentasService {
         // Actualizar tipos de envío
         if (doc.idSucursalDestino) {
           venta.tiposEnvio.agencia += 1;
-        } else {
+        } else if (doc.idCiudadDestino) {
           venta.tiposEnvio.domicilio += 1;
+        } else {
+          venta.tiposEnvio.desconocido += 1;
         }
 
         const canal = doc.canalVenta || 'Desconocido';
@@ -156,11 +158,9 @@ export class VentasService {
               }),
             ),
             tiposEnvio: [
-              { destino: 'Retiro en agencia', total: data.tiposEnvio.agencia },
-              {
-                destino: 'Envios a domicilio',
-                total: data.tiposEnvio.domicilio,
-              },
+              { tipo: 'Retiro en agencia', total: data.tiposEnvio.agencia },
+              { tipo: 'Envios a domicilio', total: data.tiposEnvio.domicilio },
+              { tipo: 'Desconocido', total: data.tiposEnvio.desconocido },
             ],
             canalesVenta: data.canalesVenta.map(
               ({ canal, total, totalMoney }) => ({
@@ -189,11 +189,9 @@ export class VentasService {
               }),
             ),
             tiposEnvio: [
-              { destino: 'Retiro en agencia', total: data.tiposEnvio.agencia },
-              {
-                destino: 'Envios a domicilio',
-                total: data.tiposEnvio.domicilio,
-              },
+              { tipo: 'Retiro en agencia', total: data.tiposEnvio.agencia },
+              { tipo: 'Envios a domicilio', total: data.tiposEnvio.domicilio },
+              { tipo: 'Desconocido', total: data.tiposEnvio.desconocido },
             ],
             canalesVenta: data.canalesVenta.map(
               ({ canal, total, totalMoney }) => ({

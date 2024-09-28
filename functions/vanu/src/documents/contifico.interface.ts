@@ -7,6 +7,7 @@ export interface Persona {
   placa: string | null;
   razon_social: string | null;
   telefonos: string | null;
+  telefonosArray: string[] | null;
   direccion: string | null;
   tipo: string | null;
   es_cliente: boolean | null;

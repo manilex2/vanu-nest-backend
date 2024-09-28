@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import axios, { AxiosResponse } from 'axios';
 import { CommonService } from '../common/common.service';
 import { Contifico, Persona } from './contifico.interface';
@@ -11,8 +11,8 @@ import {
   Timestamp,
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
-import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { ParamsDTO } from './params.interface';
 
 @Injectable()
 export class DocumentsService {
@@ -28,159 +28,186 @@ export class DocumentsService {
    */
   async saveDocuments() {
     let date: number | Date = Date.now();
-    date = new Date(date - 5 * 1000 * 60 * 60);
+    date = new Date(date - 24 * 1000 * 60 * 60);
     let docs: Contifico[] | null;
-    await axios(
-      this.configService.get<string>('CONTIFICO_URI_DOCUMENT') +
-        '?tipo_registro=CLI&fecha_emision=' +
-        date.toLocaleDateString('en-GB'),
-      {
-        method: 'GET',
-        headers: {
-          Authorization: this.configService.get<string>('CONTIFICO_AUTH_TOKEN'),
+    try {
+      await axios(
+        this.configService.get<string>('CONTIFICO_URI_DOCUMENT') +
+          '?tipo_registro=CLI&fecha_emision=' +
+          date.toLocaleDateString('en-GB'),
+        {
+          method: 'GET',
+          headers: {
+            Authorization: this.configService.get<string>(
+              'CONTIFICO_AUTH_TOKEN',
+            ),
+          },
         },
-      },
-    )
-      .then((res: AxiosResponse) => {
-        return res.data;
-      })
-      .then((data) => {
-        // console.log("Obteniendo documentos");
-        docs = data;
-      })
-      .catch((err) => console.error(err));
-    if (docs.length < 1) {
-      console.log('No hay documentos para agregar');
-    }
-    for (const doc of docs) {
-      if (
-        (doc.tipo_documento == 'FAC' && doc.electronico) ||
-        doc.tipo_documento == 'PRE'
-      ) {
-        let existDocument = await this.commonService.checkDocument(
-          doc.documento,
-        );
+      )
+        .then((res: AxiosResponse) => {
+          return res.data;
+        })
+        .then((data) => {
+          // console.log("Obteniendo documentos");
+          docs = data;
+        })
+        .catch((err) => console.error(err));
+      if (docs.length < 1) {
+        console.log('No hay documentos para agregar');
+      }
+      for (const doc of docs) {
+        if (
+          (doc.tipo_documento == 'FAC' && doc.electronico) ||
+          doc.tipo_documento == 'PRE'
+        ) {
+          console.log(doc);
+          let existDocument = await this.commonService.checkDocument(
+            doc.documento,
+          );
 
-        if (existDocument == null) {
-          continue;
-        }
-
-        if (!existDocument) {
-          // console.log("Guardando o actualizando cliente");
-          const cliente = doc.persona;
-          const dataAdicional1 = doc.adicional1.split('-');
-          const costoEnvio = Number(dataAdicional1[0]);
-          const canalVenta = dataAdicional1[1];
-          let usuarioComprador = '';
-          if (dataAdicional1[2] !== null || dataAdicional1[2] !== '') {
-            usuarioComprador = dataAdicional1[2];
-          }
-          const formaPago = doc.adicional2;
-          cliente['id'] = cliente.cedula || cliente.ruc;
-          cliente['tipo_id'] = cliente.id.length == 10 ? 'CEDULA' : 'RUC';
-          cliente['email'] = cliente.email.split(' ')[0];
-          let idCiudadDestino: DocumentReference | number | null = null;
-          let idSucursalDestino: DocumentReference | number | null = null;
-          const total = Number(doc.total);
-          let fechaEmision: any = null;
-          if (doc.fecha_emision.split('/').length == 3) {
-            fechaEmision = doc.fecha_emision.split('/');
-            fechaEmision = new Date(
-              fechaEmision[2],
-              Number(fechaEmision[1]) - 1,
-              fechaEmision[0],
-            );
-          }
-
-          if (doc.referencia != '') {
-            const destinos: string[] = doc.referencia.split('-');
-
-            idCiudadDestino = !isNaN(Number(destinos[0]))
-              ? Number(destinos[0])
-              : null;
-
-            if (destinos[1]) {
-              idSucursalDestino = !isNaN(Number(destinos[1]))
-                ? Number(destinos[1])
-                : null;
-            }
-
-            if (destinos[2]) {
-              cliente.direccion += ' - ' + destinos[2];
-            }
-          }
-
-          const existClient = await this.saveClient(cliente);
-
-          if (!existClient) {
+          if (existDocument == null) {
             continue;
           }
 
-          const clientRef = (
-            await this.db
-              .collection('clientes')
-              .where('personaId', '==', cliente.id)
-              .get()
-          ).docs.map((client) => {
-            return client.ref;
-          });
+          if (!existDocument) {
+            // console.log("Guardando o actualizando cliente");
+            const cliente = doc.persona;
+            const dataAdicional1 = doc.adicional1.split('-');
+            const costoEnvio = Number(dataAdicional1[0]);
+            const canalVenta =
+              dataAdicional1[1] !== undefined ? dataAdicional1[1] : null;
+            let usuarioComprador = null;
+            if (
+              dataAdicional1[2] !== null &&
+              dataAdicional1[2] !== '' &&
+              dataAdicional1[2] !== undefined
+            ) {
+              usuarioComprador = dataAdicional1[2];
+            }
+            const formaPago = doc.adicional2;
+            cliente['id'] = cliente.cedula || cliente.ruc;
+            cliente['tipo_id'] = cliente.id.length == 10 ? 'CEDULA' : 'RUC';
+            cliente['email'] = cliente.email.split(' ')[0];
+            const cli = cliente.telefonos ? cliente.telefonos.split('/') : null;
+            cliente['telefonosArray'] = cli;
+            let idCiudadDestino: DocumentReference | number | null = null;
+            let idSucursalDestino: DocumentReference | number | null = null;
+            const total = Number(doc.total);
+            let fechaEmision: any = null;
+            if (doc.fecha_emision.split('/').length == 3) {
+              fechaEmision = doc.fecha_emision.split('/');
+              fechaEmision = new Date(
+                fechaEmision[2],
+                Number(fechaEmision[1]) - 1,
+                fechaEmision[0],
+              );
+            }
 
-          const ciudadRef = (
-            await this.db
-              .collection('ciudades')
-              .where('codigo', '==', Number(idCiudadDestino))
-              .get()
-          ).docs.map((ciudad) => {
-            return ciudad.ref;
-          });
+            if (doc.referencia != '') {
+              const destinos: string[] = doc.referencia.split('-');
 
-          const sucursalRef = (
-            await this.db
-              .collection('sucursales')
-              .where('codigo', '==', Number(idSucursalDestino))
-              .get()
-          ).docs.map((sucursal) => {
-            return sucursal.ref;
-          });
+              idCiudadDestino = !isNaN(Number(destinos[0]))
+                ? Number(destinos[0])
+                : null;
 
-          const document: DocumentosDB = {
-            documento: doc.documento,
-            estado: 1,
-            urlRide: doc.url_ride,
-            fechaEmision: fechaEmision != null ? fechaEmision : date,
-            fechaCreacion: date,
-            total: total,
-            descripcion: doc.descripcion,
-            idCliente: clientRef[0],
-            idCiudadDestino: ciudadRef[0],
-            idSucursalDestino:
-              idSucursalDestino != null && idSucursalDestino != 0
-                ? sucursalRef[0]
-                : null,
-            idGuia: null,
-            urlGuiaPDF: null,
-            tipoDocumento: doc.tipo_documento,
-            costoEnvio: costoEnvio,
-            canalVenta: canalVenta,
-            formaPago: formaPago,
-            usuarioComprador: usuarioComprador,
-          };
-          existDocument = await this.saveDocument(document);
-        }
+              if (destinos[1]) {
+                idSucursalDestino = !isNaN(Number(destinos[1]))
+                  ? Number(destinos[1])
+                  : null;
+              }
 
-        if (existDocument) {
-          const documentoRef = (
-            await this.db
-              .collection('documentos')
-              .where('documento', '==', doc.documento)
-              .get()
-          ).docs.map((document) => {
-            return document.ref;
-          });
-          doc.ref = documentoRef[0];
-          await this.saveDetalles(doc);
+              if (destinos[2]) {
+                cliente.direccion += ' - ' + destinos[2];
+              }
+            }
+
+            const existClient = await this.saveClient(cliente);
+
+            if (!existClient) {
+              continue;
+            }
+
+            const clientRef = (
+              await this.db
+                .collection('clientes')
+                .where('personaId', '==', cliente.id)
+                .get()
+            ).docs.map((client) => {
+              return client.ref;
+            });
+
+            const ciudadRef = (
+              await this.db
+                .collection('ciudades')
+                .where('codigo', '==', Number(idCiudadDestino))
+                .get()
+            ).docs.map((ciudad) => {
+              return ciudad.ref;
+            });
+
+            const sucursalRef = (
+              await this.db
+                .collection('sucursales')
+                .where('codigo', '==', Number(idSucursalDestino))
+                .get()
+            ).docs.map((sucursal) => {
+              return sucursal.ref;
+            });
+
+            const document: DocumentosDB = {
+              documento: doc.documento,
+              estado: 1,
+              urlRide: doc.url_ride,
+              fechaEmision: fechaEmision != null ? fechaEmision : date,
+              fechaCreacion: date,
+              total: total,
+              descripcion: doc.descripcion,
+              idCliente: clientRef[0],
+              idCiudadDestino:
+                idCiudadDestino != null && idCiudadDestino != 0
+                  ? ciudadRef[0]
+                  : null,
+              idSucursalDestino:
+                idSucursalDestino != null && idSucursalDestino != 0
+                  ? sucursalRef[0]
+                  : null,
+              idGuia: null,
+              urlGuiaPDF: null,
+              tipoDocumento: doc.tipo_documento,
+              costoEnvio: costoEnvio,
+              canalVenta: canalVenta,
+              formaPago: formaPago,
+              usuarioComprador: usuarioComprador,
+            };
+            // Eliminar campos que sean null o ''
+            Object.entries(document).forEach(([key, value]) => {
+              if (value === null || value === '') {
+                delete document[key as keyof DocumentosDB];
+              }
+            });
+            existDocument = await this.saveDocument(document);
+          }
+
+          if (existDocument) {
+            const documentoRef = (
+              await this.db
+                .collection('documentos')
+                .where('documento', '==', doc.documento)
+                .get()
+            ).docs.map((document) => {
+              return document.ref;
+            });
+            doc.ref = documentoRef[0];
+            await this.saveDetalles(doc);
+          }
         }
       }
+    } catch (error) {
+      console.log(error);
+      throw new HttpException(
+        `Ocurrio el siguiente error: ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -245,8 +272,8 @@ export class DocumentsService {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .then((_res) => {
               const msg =
-                'Detalle del doc' +
-                detalle.id_documento +
+                'Detalle del producto ' +
+                detalle.id_producto +
                 ' guardado con éxito.';
 
               console.log(msg);
@@ -278,11 +305,13 @@ export class DocumentsService {
     let cities: string | any[];
     let ciudad: DocumentReference;
 
-    const citiesWithOutName: number = (
-      await this.db.collection('ciudades').where('nombre', '==', null).get()
-    ).docs.length;
+    const citiesWithoutName = (
+      await this.db.collection('ciudades').get()
+    ).docs.filter(
+      (doc) => doc.data().nombre === null || doc.data().nombre === undefined,
+    );
 
-    if (citiesWithOutName == 0) {
+    if (citiesWithoutName.length <= 1) {
       console.log('No hay ciudades para actualizar');
       return;
     }
@@ -314,15 +343,37 @@ export class DocumentsService {
           .where('codigo', '==', Number(city.id))
           .get()
       ).docs.map((ciudad) => {
-        return ciudad.ref;
+        return ciudad;
       });
-      if (ciudades.length < 1) {
+      if (
+        ciudades.length < 1 ||
+        ciudades[0].data().nombre ||
+        ciudades[0].data().nombre != null
+      ) {
         continue;
       }
-      ciudad = ciudades[0];
+      ciudad = ciudades[0].ref;
       await ciudad
         .update({
           nombre: city.nombre,
+        })
+        .catch((err) => {
+          console.error('Error al actualizar ciudades');
+          throw err;
+        });
+    }
+    const citiesWithoutNameAfter = (
+      await this.db.collection('ciudades').get()
+    ).docs.filter(
+      (doc) => doc.data().nombre === null || doc.data().nombre === undefined,
+    );
+    for (const city of citiesWithoutNameAfter) {
+      if (!city.data().codigo) {
+        continue;
+      }
+      await ciudad
+        .update({
+          nombre: String(city.data().codigo),
         })
         .catch((err) => {
           console.error('Error al actualizar ciudades');
@@ -436,7 +487,7 @@ export class DocumentsService {
               .collection('ciudades')
               .add({
                 codigo: Number(sucursal.id_ciudad) || null,
-                provincia: provincia,
+                provinciaId: provincia,
               })
               .catch((err) => {
                 console.error(
@@ -492,27 +543,37 @@ export class DocumentsService {
    */
   async saveDocument(document: DocumentosDB): Promise<boolean> {
     let existDocument = false;
+    const documentData = {
+      estado: document.estado,
+      urlRide: document.urlRide,
+      fechaEmision: document.fechaEmision
+        ? Timestamp.fromDate(document.fechaEmision)
+        : undefined,
+      fechaCreacion: document.fechaCreacion
+        ? Timestamp.fromDate(document.fechaCreacion)
+        : undefined,
+      total: document.total,
+      descripcion: document.descripcion,
+      idCliente: document.idCliente,
+      idCiudadDestino: document.idCiudadDestino,
+      idSucursalDestino: document.idSucursalDestino,
+      urlGuiaPdf: document.urlGuiaPDF,
+      tipoDocumento: document.tipoDocumento,
+      costoEnvio: document.costoEnvio,
+      canalVenta: document.canalVenta,
+      usuarioComprador: document.usuarioComprador,
+      formaPago: document.formaPago,
+      documento: document.documento,
+      idGuia: document.idGuia,
+    };
+    // Filtrar las propiedades que no sean undefined
+    const filteredDocumentData = Object.fromEntries(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      Object.entries(documentData).filter(([_, value]) => value !== undefined),
+    );
     await this.db
       .collection('documentos')
-      .add({
-        estado: document.estado,
-        urlRide: document.urlRide,
-        fechaEmision: Timestamp.fromDate(document.fechaEmision),
-        fechaCreacion: Timestamp.fromDate(document.fechaCreacion),
-        total: document.total,
-        descripcion: document.descripcion,
-        idCliente: document.idCliente,
-        idCiudadDestino: document.idCiudadDestino,
-        idSucursalDestino: document.idSucursalDestino,
-        urlGuiaPdf: document.urlGuiaPDF,
-        tipoDocumento: document.tipoDocumento,
-        costoEnvio: document.costoEnvio,
-        canalVenta: document.canalVenta,
-        usuarioComprador: document.usuarioComprador,
-        formaPago: document.formaPago,
-        documento: document.documento,
-        idGuia: document.idGuia,
-      })
+      .add(filteredDocumentData)
       .then(() => {
         const msg = 'Documento ' + document.documento + ' guardado con éxito.';
         console.log(msg);
@@ -558,14 +619,14 @@ export class DocumentsService {
       }
       if (!hasError && existClient) {
         if (
-          oldDataClient[0].telefonos != cliente.telefonos ||
+          oldDataClient[0].telefonos != cliente.telefonosArray ||
           oldDataClient[0].direccion != cliente.direccion ||
           oldDataClient[0].tipo != cliente.tipo ||
           oldDataClient[0].email != cliente.email
         ) {
           const newClient: ClienteDB = {
             email: cliente.email,
-            telefonos: cliente.telefonos,
+            telefonos: cliente.telefonosArray,
             direccion: cliente.direccion,
             tipo: cliente.tipo,
             id: oldDataClient[0].id,
@@ -585,11 +646,10 @@ export class DocumentsService {
             personaId: cliente.id,
             tipoId: cliente.tipo_id,
             razonSocial: cliente.razon_social,
-            telefonos: cliente.telefonos,
+            telefonos: cliente.telefonosArray,
             direccion: cliente.direccion,
             tipo: cliente.tipo,
             email: cliente.email,
-            otroDestinatario: null,
           })
           .then(() => {
             existClient = true;
@@ -651,11 +711,11 @@ export class DocumentsService {
   /**
    *
    * @param {string[]} params Parámetros a evaluar
-   * @param {Request} event Request de la solicitud
+   * @param {ParamsDTO} body Body de la solicitud
    * @return {boolean} Retorna true si se encuentran todos los parámetros
    */
-  async checkParams(params: string[], event: Request): Promise<boolean> {
-    const reqParamList = event.body;
+  async checkParams(params: string[], body: ParamsDTO): Promise<boolean> {
+    const reqParamList = body;
     const hasAllRequiredParams = params.every((param) =>
       reqParamList.hasOwnProperty(param),
     );
@@ -675,14 +735,28 @@ export class DocumentsService {
     client: any,
   ): Promise<boolean> {
     let updated = false;
+    const formatedValue = {
+      idSucursalDestino: document.idSucursalDestino,
+      idCiudadDestino: document.idCiudadDestino,
+      costoEnvio: document.costoEnvio,
+      otroDestinatario: client,
+    };
+
+    Object.entries(formatedValue).forEach(([key, value]) => {
+      if (value === null || value === '') {
+        delete formatedValue[key];
+      }
+    });
+    if (formatedValue.otroDestinatario) {
+      formatedValue.otroDestinatario = {
+        ...formatedValue.otroDestinatario,
+        tipoId: document.tipoId,
+      };
+    }
     await this.db
       .collection('documentos')
       .doc(id)
-      .update({
-        idSucursalDestino: document.id_sucursal_destino,
-        idCiudadDestino: document.id_ciudad_destino,
-        otroDestinatario: client,
-      })
+      .update(formatedValue)
       .then(() => {
         updated = true;
       })

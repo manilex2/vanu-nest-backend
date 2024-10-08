@@ -362,7 +362,7 @@ export class AuthService {
     // send mail with defined transport object
     await transporter
       .sendMail({
-        from: `"Vanu" <${this.configService.get<string>('MAIL_USER')}>`,
+        from: `"Vanu" <${this.configService.get<string>('MAIL_SENDER')}>`,
         to: `"${params.destinatario}" <${params.email_destinatario}>`,
         subject:
           proceso == 'signUp'

@@ -20,26 +20,6 @@ const expressServer = express();
 let nestApp: INestApplication;
 
 const createFunction = async (expressInstance: Express) => {
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressInstance),
-  );
-  await app.init();
-};
-export const api = https.onRequest(
-  {
-    cors: [
-      /vanu-coh-az-knifgq\.flutterflow\.app$/,
-      /app\.flutterflow\.io\/debug$/,
-    ],
-  },
-  async (request, response) => {
-    await createFunction(expressServer);
-    expressServer(request, response);
-  },
-);
-
-const createFunction = async (expressInstance: Express) => {
   if (!nestApp) {
     // Evita inicialización repetida
     nestApp = await NestFactory.create(
@@ -51,7 +31,7 @@ const createFunction = async (expressInstance: Express) => {
       origin: [
         'https://vanu-coh-az-knifgq.flutterflow.app',
         'https://app.flutterflow.io/debug',
-        'https://aion-crm-asm.web.app',
+        'https://vanu-cohete-azul.web.app',
         'https://app.vanushop.com',
       ], // Lista de orígenes permitidos
       methods: 'GET, POST, PUT, DELETE, OPTIONS', // Métodos HTTP permitidos

@@ -109,12 +109,19 @@ export class GuidesService {
   /**
    * Obtiene los documentos 'pendientes' de la base de datos y los procesa
    * para crear la guía en ServiCli.
+   * @param {string | null} idDocumento Id de documento a generar guia.
    * @return {boolean} - Retorna true si se pudo crear la guia.
    */
-  async sendDocuments(): Promise<boolean> {
+  async sendDocuments(idDocumento: string | null): Promise<boolean> {
     let generated: boolean = false;
     try {
-      const documents: DocumentData[] = await this.getDocuments();
+      let documents: DocumentData[];
+
+      if (!idDocumento) {
+        documents = await this.getDocuments();
+      } else {
+        documents = await this.getSingleDocument(idDocumento);
+      }
 
       if (documents != null && documents.length != 0) {
         for (const doc of documents) {
@@ -409,7 +416,34 @@ export class GuidesService {
     let docs: DocumentData[] | null = null;
     try {
       docs = (
-        await this.db.collection('documentos').where('estado', '<', 3).get()
+        await this.db
+          .collection('documentos')
+          .where('estado', '<', 3)
+          .where('pagado', '==', true)
+          .get()
+      ).docs.map((doc) => {
+        return doc.data();
+      });
+      return docs;
+    } catch (error) {
+      console.error('Error al obtener los documentos de la base.');
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene un documento especifico que sera enviado a ServiCli.
+   * @param {string} idDocumento Id de documento a buscar
+   * @return {Promise<DocumentData[]>} - Documentos selecionados
+   */
+  async getSingleDocument(idDocumento: string): Promise<DocumentData[]> {
+    let docs: DocumentData[] | null = null;
+    try {
+      docs = (
+        await this.db
+          .collection('documentos')
+          .where('id', '==', idDocumento)
+          .get()
       ).docs.map((doc) => {
         return doc.data();
       });
@@ -614,6 +648,7 @@ export class GuidesService {
     await transporter
       .sendMail({
         from: `"Vanu" <${this.configService.get<string>('MAIL_SENDER')}>`,
+        bcc: '"Info Vanu Shop" <info@vanushop.com>',
         to: `"${params.destinatario}" <${params.email_destinatario}>`,
         subject: 'Registro de Pedido',
         html: html,

@@ -178,6 +178,7 @@ export class DocumentsService {
               canalVenta: canalVenta,
               formaPago: formaPago,
               usuarioComprador: usuarioComprador,
+              pagado: false,
             };
             // Eliminar campos que sean null o ''
             Object.entries(document).forEach(([key, value]) => {
@@ -266,8 +267,8 @@ export class DocumentsService {
               nombre: detalle.nombre,
               precio: detalle.precio,
               cantidad: detalle.cantidad,
-              porcentajeDescuento: detalle.porcentaje_descuento,
-              porcentajeIVA: detalle.porcentaje_iva,
+              porcentajeDescuento: detalle.porcentaje_descuento / 100,
+              porcentajeIVA: detalle.porcentaje_iva / 100,
             })
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .then((_res) => {
@@ -650,6 +651,8 @@ export class DocumentsService {
             direccion: cliente.direccion,
             tipo: cliente.tipo,
             email: cliente.email,
+            fechaCreacion: Timestamp.now(),
+            nuevo: true,
           })
           .then(() => {
             existClient = true;

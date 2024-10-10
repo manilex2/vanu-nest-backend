@@ -118,9 +118,13 @@ export class GuidesController {
   }
 
   @Get('generateGuideServiCli')
-  async generateGuideServiCli(@Req() req: Request, @Res() res: Response) {
+  async generateGuideServiCli(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query() idDocumento: string | null,
+  ) {
     try {
-      await this.guidesService.sendDocuments();
+      await this.guidesService.sendDocuments(idDocumento);
       res.setHeader('Content-Type', 'application/json');
       res
         .status(HttpStatus.OK)

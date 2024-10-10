@@ -16,7 +16,7 @@ setGlobalOptions({
 // Programar la función
 exports.generateGuideServiCLI = onSchedule({
   timeZone: "America/Guayaquil",
-  schedule: "0 9-18 * * 1-5",
+  schedule: "* 9-18 * * 1-5",
 }, async () => {
   try {
     // Realiza una solicitud HTTP a la función existente

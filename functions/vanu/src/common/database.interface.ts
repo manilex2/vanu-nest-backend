@@ -19,6 +19,7 @@ export interface DocumentosDB {
   formaPago: string;
   idGuia: string;
   documento: string;
+  pagado: boolean;
 }
 
 export interface ClienteDB {

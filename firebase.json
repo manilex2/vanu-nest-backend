@@ -78,6 +78,36 @@
         "npm --prefix \"$RESOURCE_DIR\" run lint"
       ],
       "runtime": "nodejs20"
+    },
+    {
+      "source": "functions/updateClientMonthTotal",
+      "codebase": "update-client-month-total",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ],
+      "runtime": "nodejs20"
+    },
+    {
+      "source": "functions/updateClientStatus",
+      "codebase": "update-client-status",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ],
+      "runtime": "nodejs20"
     }
   ]
 }

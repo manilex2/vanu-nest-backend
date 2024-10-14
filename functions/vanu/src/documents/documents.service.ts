@@ -4,11 +4,13 @@ import { CommonService } from '../common/common.service';
 import { Contifico, Persona } from './contifico.interface';
 import { ClienteDB, DocumentosDB } from 'src/common/database.interface';
 import {
-  DocumentData,
   DocumentReference,
   Firestore,
   getFirestore,
   Timestamp,
+  FieldValue,
+  QuerySnapshot,
+  DocumentData,
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
 import { ConfigService } from '@nestjs/config';
@@ -121,7 +123,7 @@ export class DocumentsService {
               }
             }
 
-            const existClient = await this.saveClient(cliente);
+            const existClient = await this.saveClient(cliente, total);
 
             if (!existClient) {
               continue;
@@ -190,16 +192,16 @@ export class DocumentsService {
           }
 
           if (existDocument) {
-            const documentoRef = (
+            const documento = (
               await this.db
                 .collection('documentos')
                 .where('documento', '==', doc.documento)
                 .get()
             ).docs.map((document) => {
-              return document.ref;
+              return document;
             });
-            doc.ref = documentoRef[0];
-            await this.saveDetalles(doc);
+            doc.ref = documento[0].ref;
+            await this.saveDetalles(doc, documento[0].data());
           }
         }
       }
@@ -215,8 +217,11 @@ export class DocumentsService {
   /**
    * Guarda todos los detalles o productos de un documento en la base de datos
    * @param {Contifico} doc - Objeto Documento de la base de datos
+   * @param {DocumentData} documentFB - Objeto Documento de la base de datos
    */
-  async saveDetalles(doc: Contifico) {
+  async saveDetalles(doc: Contifico, documentFB: DocumentData) {
+    const mesActual = new Date().getMonth() + 1; // Mes actual (de 1 a 12)
+    const añoActual = new Date().getFullYear(); // Año actual
     for (const detalle of doc.detalles) {
       let existDetalle: boolean = false;
       let hasError: boolean = false;
@@ -259,6 +264,56 @@ export class DocumentsService {
           delete detalle.producto_id;
           delete detalle.producto_nombre;
 
+          const productoRef: QuerySnapshot | DocumentReference = await this.db
+            .collection('productos')
+            .where('idProducto', '==', detalle.id_producto)
+            .limit(1)
+            .get();
+
+          if (!productoRef.empty) {
+            console.log(
+              `Producto ${detalle.nombre} encontrado, actualizando registro...`,
+            );
+
+            try {
+              // Actualizar el registro en la colección de productos para el mes actual y el año actual
+              await this.actualizarRegistroProducto(
+                detalle.id_producto,
+                detalle.nombre,
+                mesActual,
+                añoActual,
+                detalle.cantidad,
+                detalle.precio,
+                documentFB.canalVenta,
+              );
+            } catch (error) {
+              hasError = true;
+              console.error(`Error en actualizarRegistroProducto: ${error}`);
+              throw new Error(error);
+            }
+          } else {
+            console.log(
+              `Producto ${detalle.nombre} no encontrado, creando registro....`,
+            );
+
+            try {
+              // Actualizar el registro en la colección de productos para el mes actual y el año actual
+              await this.actualizarRegistroProducto(
+                detalle.id_producto,
+                detalle.nombre,
+                mesActual,
+                añoActual,
+                detalle.cantidad,
+                detalle.precio,
+                documentFB.canalVenta,
+              );
+            } catch (error) {
+              hasError = true;
+              console.error(`Error en actualizarRegistroProducto: ${error}`);
+              throw new Error(error);
+            }
+          }
+
           await this.db
             .collection('detalles_productos')
             .add({
@@ -278,7 +333,7 @@ export class DocumentsService {
                 ' guardado con éxito.';
 
               console.log(msg);
-              // addlogToGlide(0, 1, msg, "");
+              // addlogToFirebase(0, 1, msg, "");
             })
             .catch((err) => {
               const errorMsg =
@@ -286,7 +341,7 @@ export class DocumentsService {
 
               console.error(errorMsg);
               console.error(err);
-              // addlogToGlide(1, 1, errorMsg, err.toString());
+              // addlogToFirebase(1, 1, errorMsg, err.toString());
               hasError = true;
               throw new Error(err);
             });
@@ -295,6 +350,60 @@ export class DocumentsService {
         if (hasError) {
           continue;
         }
+      }
+    }
+  }
+
+  // Función para actualizar el registro en productos para el mes y año dados
+  async actualizarRegistroProducto(
+    productoId: string,
+    productoNombre: string,
+    mes: number,
+    anio: number,
+    cantidad: number,
+    precio: number,
+    canalVenta: string,
+  ) {
+    const productosUpdates = [
+      { mes: mes, anio: anio }, // Mes actual
+      { mes: 0, anio: anio }, // Año actual
+      { mes: 0, anio: 0 }, // Consolidado total
+    ];
+
+    for (const update of productosUpdates) {
+      const productoMesSnapshot = await this.db
+        .collection('productos')
+        .where('mes', '==', update.mes)
+        .where('anio', '==', update.anio)
+        .where('idProducto', '==', productoId)
+        .get();
+
+      if (!productoMesSnapshot.empty) {
+        const doc = productoMesSnapshot.docs[0];
+        await this.db
+          .collection('productos')
+          .doc(doc.id)
+          .update({
+            total: FieldValue.increment(cantidad),
+            totalMoney: FieldValue.increment(precio),
+          });
+        console.log(
+          `Registro actualizado para mes: ${update.mes}, año: ${update.anio}.`,
+        );
+      } else {
+        // Si no existe un registro, se puede crear uno nuevo
+        await this.db.collection('productos').add({
+          idProducto: productoId,
+          total: cantidad,
+          totalMoney: precio,
+          mes: update.mes,
+          anio: update.anio,
+          nombreProducto: productoNombre,
+          ds: canalVenta == 'DS' ? true : false,
+        });
+        console.log(
+          `Nuevo registro creado para mes: ${update.mes}, año: ${update.anio}.`,
+        );
       }
     }
   }
@@ -566,6 +675,7 @@ export class DocumentsService {
       formaPago: document.formaPago,
       documento: document.documento,
       idGuia: document.idGuia,
+      pagado: document.pagado,
     };
     // Filtrar las propiedades que no sean undefined
     const filteredDocumentData = Object.fromEntries(
@@ -594,52 +704,55 @@ export class DocumentsService {
   /**
    * Guarda el cliente en la base de datos
    * @param {Persona} cliente - Objeto cliente que será guardado
+   * @param {number} total - Total del dinero a guardar.
    * @return {boolean} True si existe o fué guardado con éxito
    */
-  async saveClient(cliente: Persona): Promise<boolean> {
-    let existClient: boolean = false;
-    let oldDataClient: DocumentData[] | null = null;
-    let updated: boolean = true;
-    let hasError: boolean = false;
+  async saveClient(cliente: Persona, total: number): Promise<boolean> {
+    let existClient = false;
+    let hasError = false;
+
     try {
-      oldDataClient = (
+      const oldDataClient = (
         await this.db
           .collection('clientes')
           .where('personaId', '==', cliente.id)
           .get()
-      ).docs.map((client) => {
-        return client.data();
-      });
+      ).docs.map((client) => client.data());
+
+      // Si existe el cliente, comprueba si se deben actualizar sus datos
       if (oldDataClient.length > 0) {
         existClient = true;
-      } else if (oldDataClient.length == 0) {
-        existClient = false;
-      } else {
-        hasError = true;
-        console.error('Error al consultar clientes de la base de datos.');
-      }
-      if (!hasError && existClient) {
+
+        const clientData = oldDataClient[0];
         if (
-          oldDataClient[0].telefonos != cliente.telefonosArray ||
-          oldDataClient[0].direccion != cliente.direccion ||
-          oldDataClient[0].tipo != cliente.tipo ||
-          oldDataClient[0].email != cliente.email
+          clientData.telefonos !== cliente.telefonosArray ||
+          clientData.direccion !== cliente.direccion ||
+          clientData.tipo !== cliente.tipo ||
+          clientData.email !== cliente.email
         ) {
-          const newClient: ClienteDB = {
+          const updatedClient: ClienteDB = {
             email: cliente.email,
             telefonos: cliente.telefonosArray,
             direccion: cliente.direccion,
             tipo: cliente.tipo,
-            id: oldDataClient[0].id,
+            id: clientData.id,
+            total: 1,
+            totalMoney: total,
           };
-          updated = await this.updateClient(newClient);
+          const updated = await this.updateClient(updatedClient);
+          if (!updated) return false;
+        } else {
+          const updatedClient: ClienteDB = {
+            id: clientData.id,
+            total: 1,
+            totalMoney: total,
+          };
+          const updated = await this.updateClientMoney(updatedClient);
+          if (!updated) return false;
         }
       }
 
-      if (hasError || !updated) {
-        return false;
-      }
-
+      // Si no existe el cliente, lo crea
       if (!existClient) {
         await this.db
           .collection('clientes')
@@ -653,27 +766,80 @@ export class DocumentsService {
             email: cliente.email,
             fechaCreacion: Timestamp.now(),
             nuevo: true,
+            frecuente: false,
+            total: FieldValue.increment(1),
+            totalMoney: FieldValue.increment(total),
+            totalMes: FieldValue.increment(1),
+            totalMoneyMes: FieldValue.increment(total),
           })
-          .then(() => {
-            existClient = true;
-            const msg = 'Cliente ' + cliente.id + ' guardado con éxito.';
-            console.log(msg);
-            // addlogToFirebase(0, 1, msg, "");
-          })
-          .catch(() => {
-            const errorMsg =
-              'Error al guardar cliente ' +
-              cliente.id +
-              ' en la base de datos.';
+          .then(async () => {
+            console.log(`Cliente ${cliente.id} guardado con éxito.`);
 
-            console.error(errorMsg);
-            // addlogToGlide(1, 1, errorMsg, err.toString());
+            // Obtener mes y año actuales
+            const mesActual = new Date().getMonth() + 1;
+            const añoActual = new Date().getFullYear();
+
+            // Actualizar las ventas para mes actual, año actual y consolidado total
+            await this.actualizarVentasClientesNuevos(mesActual, añoActual, 1);
+          })
+          .catch((err) => {
+            console.error(`Error al guardar cliente ${cliente.id}:`, err);
+            hasError = true;
           });
       }
-      return existClient;
+
+      return !hasError && existClient;
     } catch (error) {
-      console.log(error);
+      console.error('Error en saveClient:', error);
       return false;
+    }
+  }
+
+  /**
+   * @param {number} mesActual Mes actual en número
+   * @param {number} añoActual Año actual en número
+   * @param {number} incremento Cantidad a incrementar
+   */
+  // Función auxiliar para actualizar ventas
+  async actualizarVentasClientesNuevos(
+    mesActual: number,
+    añoActual: number,
+    incremento: number,
+  ) {
+    const ventasUpdates = [
+      { mes: mesActual, año: añoActual }, // Mes actual
+      { mes: 0, año: añoActual }, // Año actual
+      { mes: 0, año: 0 }, // Consolidado total
+    ];
+
+    for (const update of ventasUpdates) {
+      await this.db
+        .collection('ventas')
+        .where('mes', '==', update.mes)
+        .where('anio', '==', update.año)
+        .limit(1) // Asegura que obtienes un solo documento
+        .get()
+        .then(async (snapshot) => {
+          if (!snapshot.empty) {
+            const doc = snapshot.docs[0];
+            await this.db
+              .collection('ventas')
+              .doc(doc.id)
+              .update({
+                clientesNuevos: FieldValue.increment(incremento),
+              });
+            console.log(
+              `Actualizado clientesNuevos para mes: ${update.mes}, año: ${update.año}`,
+            );
+          }
+        })
+        .catch((err) => {
+          console.error(
+            `Error al actualizar ventas (mes: ${update.mes}, año: ${update.año}):`,
+            err,
+          );
+          throw err;
+        });
     }
   }
 
@@ -693,6 +859,10 @@ export class DocumentsService {
           direccion: cliente.direccion,
           tipo: cliente.tipo,
           email: cliente.email,
+          total: FieldValue.increment(cliente.total),
+          totalMoney: FieldValue.increment(cliente.totalMoney),
+          totalMes: FieldValue.increment(cliente.total),
+          totalMoneyMes: FieldValue.increment(cliente.totalMoney),
         })
         .then(() => {
           console.log('Cliente ' + cliente.id + ' actualizado éxitosamente');
@@ -710,6 +880,169 @@ export class DocumentsService {
       console.error(error);
     }
     return updated;
+  }
+
+  /**
+   * Actualiza el dinero total de un cliente con su respectivo id.
+   * @param {ClienteDB} cliente - Objecto cliente con los campos a actualizar
+   * @return {boolean} True si el documento se actualizó
+   */
+  async updateClientMoney(cliente: ClienteDB): Promise<boolean> {
+    let updated = false;
+    try {
+      await this.db
+        .collection('clientes')
+        .doc(cliente.id)
+        .update({
+          total: FieldValue.increment(cliente.total),
+          totalMoney: FieldValue.increment(cliente.totalMoney),
+          totalMes: FieldValue.increment(cliente.total),
+          totalMoneyMes: FieldValue.increment(cliente.totalMoney),
+        })
+        .then(() => {
+          console.log('Cliente ' + cliente.id + ' actualizado éxitosamente');
+          updated = true;
+        })
+        .catch((err) => {
+          console.log(err);
+          throw err;
+        });
+    } catch (error) {
+      const errorMsg =
+        'Error al actualizar cliente ' + cliente.id + ' de la base de datos.';
+
+      console.error(errorMsg);
+      console.error(error);
+    }
+    return updated;
+  }
+
+  /**
+   * Actualizar el estatus de los clientes.
+   * @return {string} Si los clientes se actualizaron
+   */
+  async updateClientStatus(): Promise<string> {
+    let clientesActualizados = 0;
+    try {
+      const fechaLimite = new Date();
+      fechaLimite.setMonth(fechaLimite.getMonth() - 1); // Calcula la fecha de hace un mes
+
+      const mesActual = new Date().getMonth() + 1; // Mes actual (de 1 a 12)
+      const añoActual = new Date().getFullYear(); // Año actual
+
+      // Trae todos los clientes (sin importar el valor de 'nuevo')
+      const clientesSnapshot = await this.db.collection('clientes').get();
+
+      if (clientesSnapshot.empty) {
+        console.log('No hay clientes para actualizar.');
+        return 'No se actualizaron clientes.';
+      }
+
+      const batch = this.db.batch(); // Usamos un batch para realizar todas las actualizaciones en una sola operación
+
+      // Itera sobre los clientes encontrados
+      for (const doc of clientesSnapshot.docs) {
+        const clienteRef = this.db.collection('clientes').doc(doc.id);
+        const clienteData = doc.data();
+
+        // Si el cliente es nuevo y su fecha de creación es menor a un mes, se actualiza a 'nuevo: false'
+        if (
+          clienteData.nuevo &&
+          clienteData.fechaCreacion?.toDate() <= fechaLimite
+        ) {
+          batch.update(clienteRef, { nuevo: false });
+          clientesActualizados++;
+        }
+
+        // Consultar la colección 'documentos' para obtener cuántos registros tiene el cliente para el mes actual
+        const documentosSnapshot = await this.db
+          .collection('documentos')
+          .where('idCliente', '==', doc.id)
+          .get();
+
+        // Contar cuántos documentos tienen la fecha de emisión en el mes y año actual
+        const documentosDelMesActual = documentosSnapshot.docs.filter((doc) => {
+          const fechaEmision = doc.data().fechaEmision.toDate();
+          return (
+            fechaEmision.getMonth() + 1 === mesActual &&
+            fechaEmision.getFullYear() === añoActual
+          );
+        });
+
+        // Si el cliente tiene 3 o más documentos para el mes actual, se marca como 'frecuente: true'
+        if (documentosDelMesActual.length >= 3) {
+          if (!clienteData.frecuente) {
+            // Si aún no es frecuente
+            batch.update(clienteRef, { frecuente: true });
+          }
+        } else {
+          // Si tiene menos de 3 documentos, se marca como 'frecuente: false'
+          if (clienteData.frecuente) {
+            // Si ya es frecuente
+            batch.update(clienteRef, { frecuente: false });
+          }
+        }
+      }
+
+      // Ejecutar el batch para actualizar todos los clientes
+      await batch.commit();
+      console.log(`Clientes actualizados: ${clientesActualizados}`);
+
+      // Actualizar las ventas para mes actual, año actual y consolidado total
+      await this.actualizarVentasClientesNuevos(
+        mesActual,
+        añoActual,
+        -clientesActualizados, // Restar los clientes actualizados
+      );
+
+      return `Actualizados ${clientesActualizados} clientes, actualizado el estado de frecuencia y ventas.`;
+    } catch (error) {
+      const errorMsg = 'Error al actualizar cliente de la base de datos.';
+      console.error(errorMsg);
+      console.error(error);
+      return errorMsg;
+    }
+  }
+
+  /**
+   * Actualizar el estatus de los clientes el primer día del mes.
+   * @return {string} Si los clientes se actualizaron
+   */
+  async updateClientMonth(): Promise<string> {
+    let clientesActualizados = 0;
+    try {
+      const fechaLimite = new Date();
+      fechaLimite.setMonth(fechaLimite.getMonth() - 1); // Calcula la fecha de hace un mes
+
+      // Trae todos los clientes (sin importar el valor de 'nuevo')
+      const clientesSnapshot = await this.db.collection('clientes').get();
+
+      if (clientesSnapshot.empty) {
+        console.log('No hay clientes para actualizar.');
+        return 'No se actualizaron clientes.';
+      }
+
+      const batch = this.db.batch(); // Usamos un batch para realizar todas las actualizaciones en una sola operación
+
+      // Itera sobre los clientes encontrados
+      for (const doc of clientesSnapshot.docs) {
+        const clienteRef = this.db.collection('clientes').doc(doc.id);
+
+        batch.update(clienteRef, { totalMes: 0, totalMoneyMes: 0 });
+        clientesActualizados++;
+      }
+
+      // Ejecutar el batch para actualizar todos los clientes
+      await batch.commit();
+      console.log(`Clientes actualizados: ${clientesActualizados}`);
+
+      return `Actualizados ${clientesActualizados} clientes.`;
+    } catch (error) {
+      const errorMsg = 'Error al actualizar cliente de la base de datos.';
+      console.error(errorMsg);
+      console.error(error);
+      return errorMsg;
+    }
   }
   /**
    *

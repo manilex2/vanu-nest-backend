@@ -16,7 +16,7 @@ setGlobalOptions({
 // Programar la función
 exports.actualizarInstitutionMesAnio = onSchedule({
   timeZone: "America/Guayaquil",
-  schedule: "0 0 * * *",
+  schedule: "0 0-8 1 * *",
 }, async () => {
   try {
     // Realiza una solicitud HTTP a la función existente

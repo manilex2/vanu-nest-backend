@@ -242,7 +242,7 @@ export class GuidesController {
         .doc(doc.id)
         .update({
           estado: 4,
-          idGuia: null,
+          idGuia: 0,
         })
         .then((response) => {
           if (response) {

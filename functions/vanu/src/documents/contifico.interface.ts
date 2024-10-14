@@ -54,8 +54,8 @@ interface Detalles {
   id_documento: DocumentReference | string | null;
   cuenta_id: string | null;
   centro_costo_id: string | null;
-  id_producto: DocumentReference | string | null;
-  producto_id: DocumentReference | string | null;
+  id_producto: string | null;
+  producto_id: string | null;
   producto_nombre: string | null;
   cantidad: string | number | null;
   nombre: string | null;

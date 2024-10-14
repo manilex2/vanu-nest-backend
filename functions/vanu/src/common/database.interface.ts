@@ -1,4 +1,4 @@
-import { DocumentReference } from 'firebase-admin/firestore';
+import { DocumentReference, Timestamp } from 'firebase-admin/firestore';
 
 export interface DocumentosDB {
   id?: string;
@@ -26,11 +26,17 @@ export interface ClienteDB {
   id?: string;
   tipoId?: string;
   razonSocial?: string;
-  telefonos: string[];
-  direccion: string;
-  tipo: string;
-  email: string;
+  telefonos?: string[];
+  direccion?: string;
+  tipo?: string;
+  email?: string;
   personaId?: string;
+  urlImage?: string;
+  nuevo?: boolean;
+  fechaCreacion?: Timestamp;
+  total: number;
+  totalMoney: number;
+  frecuente?: boolean;
 }
 
 export interface CitiesDB {

@@ -14,13 +14,13 @@ setGlobalOptions({
 });
 
 // Programar la función
-exports.updateSells = onSchedule({
+exports.updateClientMonthTotal = onSchedule({
   timeZone: "America/Guayaquil",
-  schedule: "*/5 9-18 * * 1-5",
+  schedule: "0 0-8 1 * *",
 }, async () => {
   try {
     // Realiza una solicitud HTTP a la función existente
-    const response = await axios.get(`${process.env.URL_FUNCTIONS}/ventas/actualizar`);
+    const response = await axios.get(`${process.env.URL_FUNCTIONS}/documents/updateClientMonthTotal`);
     console.log("Respuesta de la función:", response.data);
   } catch (error) {
     console.error("Error al llamar a la función:", error);

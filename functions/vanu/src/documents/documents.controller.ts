@@ -153,4 +153,48 @@ export class DocumentsController {
       });
     }
   }
+
+  @Get('updateClientMonthTotal')
+  async updateClientMonthTotal(@Req() req: Request, @Res() res: Response) {
+    try {
+      const message = await this.documentsService.updateClientMonth();
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.OK).send({ message });
+    } catch (err) {
+      if (err instanceof HttpException) {
+        console.log(JSON.stringify(err.message));
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(err.getStatus()).send({
+          message: `Hubo el siguiente error: ${err.message}`,
+        });
+      }
+      console.log(JSON.stringify(err));
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
+      });
+    }
+  }
+
+  @Get('updateClientStatus')
+  async updateClientStatus(@Req() req: Request, @Res() res: Response) {
+    try {
+      const message = await this.documentsService.updateClientStatus();
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.OK).send({ message });
+    } catch (err) {
+      if (err instanceof HttpException) {
+        console.log(JSON.stringify(err.message));
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(err.getStatus()).send({
+          message: `Hubo el siguiente error: ${err.message}`,
+        });
+      }
+      console.log(JSON.stringify(err));
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: `Hubo el siguiente error: ${JSON.stringify(err)}`,
+      });
+    }
+  }
 }

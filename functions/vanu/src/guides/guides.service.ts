@@ -286,9 +286,9 @@ export class GuidesService {
     body: RequestJson,
   ): Promise<number> {
     let idGuia: number | null = null;
-    idGuia = 'idGuia' in document ? document.idGuia : null;
+    idGuia = 'idGuia' in document ? document.idGuia : 0;
 
-    if (idGuia == null) {
+    if (idGuia == null || idGuia == 0) {
       await axios(this.configService.get<string>('SERVICLI_URI_GUIAS'), {
         method: 'POST',
         headers: {
@@ -437,17 +437,16 @@ export class GuidesService {
    * @return {Promise<DocumentData[]>} - Documentos selecionados
    */
   async getSingleDocument(idDocumento: string): Promise<DocumentData[]> {
-    let docs: DocumentData[] | null = null;
+    let docs: DocumentData | null = null;
     try {
+      await this.db
+        .collection('documentos')
+        .doc(idDocumento)
+        .update({ estado: 1 });
       docs = (
-        await this.db
-          .collection('documentos')
-          .where('id', '==', idDocumento)
-          .get()
-      ).docs.map((doc) => {
-        return doc.data();
-      });
-      return docs;
+        await this.db.collection('documentos').doc(idDocumento).get()
+      ).data();
+      return [docs];
     } catch (error) {
       console.error('Error al obtener los documentos de la base.');
       throw error;

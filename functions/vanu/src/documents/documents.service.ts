@@ -10,7 +10,6 @@ import {
   Timestamp,
   FieldValue,
   QuerySnapshot,
-  DocumentData,
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
 import { ConfigService } from '@nestjs/config';
@@ -201,7 +200,7 @@ export class DocumentsService {
               return document;
             });
             doc.ref = documento[0].ref;
-            await this.saveDetalles(doc, documento[0].data());
+            await this.saveDetalles(doc);
           }
         }
       }
@@ -217,9 +216,8 @@ export class DocumentsService {
   /**
    * Guarda todos los detalles o productos de un documento en la base de datos
    * @param {Contifico} doc - Objeto Documento de la base de datos
-   * @param {DocumentData} documentFB - Objeto Documento de la base de datos
    */
-  async saveDetalles(doc: Contifico, documentFB: DocumentData) {
+  async saveDetalles(doc: Contifico) {
     const mesActual = new Date().getMonth() + 1; // Mes actual (de 1 a 12)
     const añoActual = new Date().getFullYear(); // Año actual
     for (const detalle of doc.detalles) {
@@ -284,7 +282,6 @@ export class DocumentsService {
                 añoActual,
                 detalle.cantidad,
                 detalle.precio,
-                documentFB.canalVenta,
               );
             } catch (error) {
               hasError = true;
@@ -305,7 +302,6 @@ export class DocumentsService {
                 añoActual,
                 detalle.cantidad,
                 detalle.precio,
-                documentFB.canalVenta,
               );
             } catch (error) {
               hasError = true;
@@ -362,7 +358,6 @@ export class DocumentsService {
     anio: number,
     cantidad: number,
     precio: number,
-    canalVenta: string,
   ) {
     const productosUpdates = [
       { mes: mes, anio: anio }, // Mes actual
@@ -371,15 +366,24 @@ export class DocumentsService {
     ];
 
     for (const update of productosUpdates) {
-      const productoMesSnapshot = await this.db
+      const productoMesSnapshotNoDS = await this.db
         .collection('productos')
         .where('mes', '==', update.mes)
         .where('anio', '==', update.anio)
         .where('idProducto', '==', productoId)
+        .where('ds', '==', false)
         .get();
 
-      if (!productoMesSnapshot.empty) {
-        const doc = productoMesSnapshot.docs[0];
+      const productoMesSnapshotDS = await this.db
+        .collection('productos')
+        .where('mes', '==', update.mes)
+        .where('anio', '==', update.anio)
+        .where('idProducto', '==', productoId)
+        .where('ds', '==', true)
+        .get();
+
+      if (!productoMesSnapshotNoDS.empty) {
+        const doc = productoMesSnapshotNoDS.docs[0];
         await this.db
           .collection('productos')
           .doc(doc.id)
@@ -399,7 +403,35 @@ export class DocumentsService {
           mes: update.mes,
           anio: update.anio,
           nombreProducto: productoNombre,
-          ds: canalVenta == 'DS' ? true : false,
+          ds: false,
+        });
+        console.log(
+          `Nuevo registro creado para mes: ${update.mes}, año: ${update.anio}.`,
+        );
+      }
+
+      if (!productoMesSnapshotDS.empty) {
+        const doc = productoMesSnapshotDS.docs[0];
+        await this.db
+          .collection('productos')
+          .doc(doc.id)
+          .update({
+            total: FieldValue.increment(cantidad),
+            totalMoney: FieldValue.increment(precio),
+          });
+        console.log(
+          `Registro actualizado para mes: ${update.mes}, año: ${update.anio}.`,
+        );
+      } else {
+        // Si no existe un registro, se puede crear uno nuevo
+        await this.db.collection('productos').add({
+          idProducto: productoId,
+          total: cantidad,
+          totalMoney: precio,
+          mes: update.mes,
+          anio: update.anio,
+          nombreProducto: productoNombre,
+          ds: true,
         });
         console.log(
           `Nuevo registro creado para mes: ${update.mes}, año: ${update.anio}.`,

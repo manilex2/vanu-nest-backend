@@ -26,9 +26,16 @@ export class DocumentsController {
       await this.documentsService.insertSucursales();
       await this.documentsService.saveCities();
       await this.documentsService.saveStatusDocument();
-      await this.documentsService.saveDocuments();
+      const generatedDocs = await this.documentsService.saveDocuments();
       res.setHeader('Content-Type', 'application/json');
-      res.status(HttpStatus.CREATED).send({ message: 'Documentos guardados' });
+      res
+        .status(generatedDocs == true ? HttpStatus.CREATED : HttpStatus.OK)
+        .send({
+          message:
+            generatedDocs == true
+              ? 'Documentos guardados'
+              : 'No hay documentos para agregar',
+        });
     } catch (err) {
       if (err instanceof HttpException) {
         console.log(JSON.stringify(err.message));

@@ -5,6 +5,7 @@ import {
   Firestore,
   getFirestore,
 } from 'firebase-admin/firestore';
+import { DateTime } from 'luxon';
 
 @Injectable()
 export class CommonService {
@@ -27,7 +28,7 @@ export class CommonService {
       idTipo: tipo,
       etapa: etapa,
       descripcion: descripcion,
-      fecha: new Date(),
+      fecha: DateTime.now().toJSDate(),
       detalle: detalle,
     };
 

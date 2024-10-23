@@ -25,12 +25,20 @@ export class VentasService {
         .where(
           'fechaEmision',
           '>=',
-          Timestamp.fromDate(new Date(`${year}-01-01`)),
+          Timestamp.fromDate(
+            DateTime.fromObject({ year: year, month: 1, day: 1 }).toJSDate(),
+          ),
         )
         .where(
           'fechaEmision',
           '<',
-          Timestamp.fromDate(new Date(`${year + 1}-01-01`)),
+          Timestamp.fromDate(
+            DateTime.fromObject({
+              year: year + 1,
+              month: 1,
+              day: 1,
+            }).toJSDate(),
+          ),
         )
         .get();
 
@@ -252,9 +260,9 @@ export class VentasService {
     });
 
     // Obtener el mes y año actual
-    const fechaActual = new Date();
-    const mesActual = fechaActual.getMonth() + 1; // Los meses en JavaScript son base 0, así que sumamos 1
-    const anioActual = fechaActual.getFullYear();
+    const fechaActual = DateTime.now();
+    const mesActual = fechaActual.month;
+    const anioActual = fechaActual.year;
 
     // Actualizar el documento
     try {

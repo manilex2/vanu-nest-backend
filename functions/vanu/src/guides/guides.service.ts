@@ -13,6 +13,7 @@ import { createTransport, Transporter } from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
 import { Guides } from './guides';
 import { ParamsGuideDTO, ParamsManifiestoDTO } from './paramsGuide.interface';
+import { DateTime } from 'luxon';
 
 interface RowData {
   idCiudad?: string;
@@ -21,7 +22,7 @@ interface RowData {
 }
 
 interface ParamsEmail {
-  fecha: Date;
+  fecha: DateTime;
   destinatario: string;
   documento: string;
   guia: number;
@@ -202,8 +203,7 @@ export class GuidesService {
       return;
     }
 
-    let date = new Date();
-    date = new Date(date.getTime() - 5 * 1000 * 60 * 60);
+    const date = DateTime.now().setZone('America/Guayaquil');
 
     const paramsMail = {
       fecha: date,
@@ -619,7 +619,8 @@ export class GuidesService {
     const contextMail: object = {
       banner: this.configService.get<string>('VANU_BANNER_MAIL'),
       fecha: params.fecha
-        .toLocaleDateString('es-ES', {
+        .setLocale('en-GB')
+        .toLocaleString({
           weekday: 'long',
           year: 'numeric',
           month: 'long',

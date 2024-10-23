@@ -32,15 +32,14 @@ export class DocumentsService {
    */
   async saveDocuments(): Promise<boolean> {
     let documentosActualizados: number = 0;
-    let date: number | Date = Date.now();
+    const date: number | DateTime = DateTime.now().setZone('America/Guayaquil');
     let generated: boolean = false;
-    date = new Date(date - 5 * 1000 * 60 * 60);
     let docs: Contifico[] | null;
     try {
       await axios(
         this.configService.get<string>('CONTIFICO_URI_DOCUMENT') +
           '?tipo_registro=CLI&fecha_emision=' +
-          date.toLocaleDateString('en-GB'),
+          date.setLocale('en-GB').toLocaleString(),
         {
           method: 'GET',
           headers: {
@@ -167,8 +166,10 @@ export class DocumentsService {
               estado: 1,
               urlRide: doc.url_ride,
               fechaEmision:
-                fechaEmision != null ? fechaEmision.toJSDate() : date,
-              fechaCreacion: date,
+                fechaEmision != null
+                  ? fechaEmision.toJSDate()
+                  : date.toJSDate(),
+              fechaCreacion: date.toJSDate(),
               total: total,
               descripcion: doc.descripcion,
               idCliente: clientRef[0],
@@ -231,8 +232,8 @@ export class DocumentsService {
    * @param {Contifico} doc - Objeto Documento de la base de datos
    */
   async saveDetalles(doc: Contifico) {
-    const mesActual = new Date().getMonth() + 1; // Mes actual (de 1 a 12)
-    const añoActual = new Date().getFullYear(); // Año actual
+    const mesActual: number = DateTime.now().month; // Mes actual (de 1 a 12)
+    const añoActual: number = DateTime.now().year; // Año actual
     for (const detalle of doc.detalles) {
       let existDetalle: boolean = false;
       let hasError: boolean = false;
@@ -841,8 +842,8 @@ export class DocumentsService {
             console.log(`Cliente ${cliente.id} guardado con éxito.`);
 
             // Obtener mes y año actuales
-            const mesActual = new Date().getMonth() + 1;
-            const añoActual = new Date().getFullYear();
+            const mesActual: number = DateTime.now().month;
+            const añoActual: number = DateTime.now().year;
 
             // Actualizar las ventas para mes actual, año actual y consolidado total
             await this.actualizarVentasClientesNuevos(mesActual, añoActual, 1);
@@ -990,11 +991,11 @@ export class DocumentsService {
   async updateClientStatus(): Promise<string> {
     let clientesActualizados = 0;
     try {
-      const fechaLimite = new Date();
-      fechaLimite.setMonth(fechaLimite.getMonth() - 1); // Calcula la fecha de hace un mes
+      const fechaLimite = DateTime.now();
+      fechaLimite.minus({ days: 1 }); // Calcula la fecha de hace un mes
 
-      const mesActual = new Date().getMonth() + 1; // Mes actual (de 1 a 12)
-      const añoActual = new Date().getFullYear(); // Año actual
+      const mesActual = DateTime.now().month; // Mes actual (de 1 a 12)
+      const añoActual = DateTime.now().year; // Año actual
 
       // Trae todos los clientes (sin importar el valor de 'nuevo')
       const clientesSnapshot = await this.db.collection('clientes').get();
@@ -1077,8 +1078,8 @@ export class DocumentsService {
   async updateClientMonth(): Promise<string> {
     let clientesActualizados = 0;
     try {
-      const fechaLimite = new Date();
-      fechaLimite.setMonth(fechaLimite.getMonth() - 1); // Calcula la fecha de hace un mes
+      const fechaLimite = DateTime.now();
+      fechaLimite.minus({ days: 1 }); // Calcula la fecha de hace un mes
 
       // Trae todos los clientes (sin importar el valor de 'nuevo')
       const clientesSnapshot = await this.db.collection('clientes').get();

@@ -28,6 +28,7 @@ export class DocumentsService {
    * Guarda los documentos nuevos en la base de datos.
    */
   async saveDocuments() {
+    let documentosActualizados: number = 0;
     let date: number | Date = Date.now();
     date = new Date(date - 5 * 1000 * 60 * 60);
     let docs: Contifico[] | null;
@@ -66,7 +67,7 @@ export class DocumentsService {
             doc.documento,
           );
 
-          if (existDocument == null) {
+          if (existDocument) {
             continue;
           }
 
@@ -203,7 +204,9 @@ export class DocumentsService {
             await this.saveDetalles(doc);
           }
         }
+        documentosActualizados++;
       }
+      console.log(`${documentosActualizados} documento(s) creado(s)`);
     } catch (error) {
       console.log(error);
       throw new HttpException(
@@ -749,7 +752,7 @@ export class DocumentsService {
           .collection('clientes')
           .where('personaId', '==', cliente.id)
           .get()
-      ).docs.map((client) => client.data());
+      ).docs.map((client) => client);
 
       // Si existe el cliente, comprueba si se deben actualizar sus datos
       if (oldDataClient.length > 0) {
@@ -757,10 +760,10 @@ export class DocumentsService {
 
         const clientData = oldDataClient[0];
         if (
-          clientData.telefonos !== cliente.telefonosArray ||
-          clientData.direccion !== cliente.direccion ||
-          clientData.tipo !== cliente.tipo ||
-          clientData.email !== cliente.email
+          clientData.data().telefonos !== cliente.telefonosArray ||
+          clientData.data().direccion !== cliente.direccion ||
+          clientData.data().tipo !== cliente.tipo ||
+          clientData.data().email !== cliente.email
         ) {
           const updatedClient: ClienteDB = {
             email: cliente.email,
@@ -813,6 +816,7 @@ export class DocumentsService {
 
             // Actualizar las ventas para mes actual, año actual y consolidado total
             await this.actualizarVentasClientesNuevos(mesActual, añoActual, 1);
+            existClient = true;
           })
           .catch((err) => {
             console.error(`Error al guardar cliente ${cliente.id}:`, err);

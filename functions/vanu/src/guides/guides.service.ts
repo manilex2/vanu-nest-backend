@@ -448,7 +448,7 @@ export class GuidesService {
       ).data();
       return [docs];
     } catch (error) {
-      console.error('Error al obtener los documentos de la base.');
+      console.error('Error al obtener este documento de la base.');
       throw error;
     }
   }

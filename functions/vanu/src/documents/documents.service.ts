@@ -103,11 +103,16 @@ export class DocumentsService {
             let fechaEmision: DateTime | null = null;
             if (doc.fecha_emision.split('/').length == 3) {
               const [day, month, year] = doc.fecha_emision.split('/');
-              fechaEmision = DateTime.utc(
-                Number(year),
-                Number(month),
-                Number(day),
-              );
+              // Crear la fecha usando Luxon y convertirla a UTC
+              fechaEmision = DateTime.fromObject(
+                {
+                  day: Number(day),
+                  month: Number(month),
+                  year: Number(year),
+                },
+                { zone: 'America/Guayaquil' },
+              ) // O la zona horaria que necesites
+                .toUTC(); // Convertir a UTC
             }
 
             if (doc.referencia != '') {
@@ -516,7 +521,6 @@ export class DocumentsService {
       ).docs.map((ciudad) => {
         return ciudad;
       });
-      console.log('Nombre de Ciudad: ', city.nombre);
       if (
         ciudades.length < 1 ||
         ciudades[0].data().nombre ||
@@ -540,7 +544,7 @@ export class DocumentsService {
       (doc) => doc.data().nombre === null || doc.data().nombre === undefined,
     );
     for (const city of citiesWithoutNameAfter) {
-      console.log(`Eliminando ciudad ${city.ref}...`);
+      console.log(`Eliminando ciudad ${city.id}...`);
       await city.ref
         .delete()
         .then(() => console.log('Ciudad eliminada.'))

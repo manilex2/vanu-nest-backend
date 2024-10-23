@@ -28,7 +28,7 @@ export class DocumentsService {
    * Guarda los documentos nuevos en la base de datos.
    * @returns {boolean} Retorna true si se generaron nuevos documentos
    */
-  async saveDocuments() {
+  async saveDocuments(): Promise<boolean> {
     let documentosActualizados: number = 0;
     let date: number | Date = Date.now();
     let generated: boolean = false;

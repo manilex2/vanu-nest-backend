@@ -202,6 +202,7 @@ export class VentasService {
           ventasEnvios: data.ventasEnvios,
           envios: data.envios,
           clientesAtendidos: data.clientesAtendidos,
+          clientesNuevos: data.clientesNuevos,
           pedidos: data.pedidos,
           principalesDestinos: data.principalesDestinos.map(
             ({ destino, total }) => ({

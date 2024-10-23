@@ -103,6 +103,7 @@ interface Cobros {
 
 export interface Contifico {
   ref: DocumentReference | null;
+  canalVenta: string | null;
   id: string | null;
   pos: string | null;
   fecha_creacion: string | null;

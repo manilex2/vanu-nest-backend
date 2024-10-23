@@ -205,6 +205,7 @@ export class DocumentsService {
               return document;
             });
             doc.ref = documento[0].ref;
+            doc.canalVenta = documento[0].data().canalVentam;
             await this.saveDetalles(doc);
           }
         }
@@ -291,6 +292,7 @@ export class DocumentsService {
                 añoActual,
                 detalle.cantidad,
                 detalle.precio,
+                doc.canalVenta,
               );
             } catch (error) {
               hasError = true;
@@ -311,6 +313,7 @@ export class DocumentsService {
                 añoActual,
                 detalle.cantidad,
                 detalle.precio,
+                doc.canalVenta,
               );
             } catch (error) {
               hasError = true;
@@ -367,6 +370,7 @@ export class DocumentsService {
     anio: number,
     cantidad: number,
     precio: number,
+    canalVenta: string,
   ) {
     const productosUpdates = [
       { mes: mes, anio: anio }, // Mes actual
@@ -397,25 +401,31 @@ export class DocumentsService {
           .collection('productos')
           .doc(doc.id)
           .update({
-            total: FieldValue.increment(cantidad),
-            totalMoney: FieldValue.increment(precio),
+            total:
+              canalVenta != 'DS'
+                ? FieldValue.increment(cantidad)
+                : FieldValue.increment(0),
+            totalMoney:
+              canalVenta != 'DS'
+                ? FieldValue.increment(precio)
+                : FieldValue.increment(0),
           });
         console.log(
-          `Registro actualizado para mes: ${update.mes}, año: ${update.anio}.`,
+          `Registro actualizado para producto ${doc.data().nombreProducto} para mes: ${update.mes}, año: ${update.anio}.`,
         );
       } else {
         // Si no existe un registro, se puede crear uno nuevo
         await this.db.collection('productos').add({
           idProducto: productoId,
-          total: cantidad,
-          totalMoney: precio,
+          total: canalVenta != 'DS' ? cantidad : 0,
+          totalMoney: canalVenta != 'DS' ? precio : 0,
           mes: update.mes,
           anio: update.anio,
           nombreProducto: productoNombre,
           ds: false,
         });
         console.log(
-          `Nuevo registro creado para mes: ${update.mes}, año: ${update.anio}.`,
+          `Nuevo registro creado para producto ${productoNombre} para mes: ${update.mes}, año: ${update.anio}.`,
         );
       }
 
@@ -425,25 +435,31 @@ export class DocumentsService {
           .collection('productos')
           .doc(doc.id)
           .update({
-            total: FieldValue.increment(cantidad),
-            totalMoney: FieldValue.increment(precio),
+            total:
+              canalVenta == 'DS'
+                ? FieldValue.increment(cantidad)
+                : FieldValue.increment(0),
+            totalMoney:
+              canalVenta == 'DS'
+                ? FieldValue.increment(precio)
+                : FieldValue.increment(0),
           });
         console.log(
-          `Registro actualizado para mes: ${update.mes}, año: ${update.anio}.`,
+          `Registro actualizado para producto ${doc.data().nombreProducto} de Distribuidor para mes: ${update.mes}, año: ${update.anio}.`,
         );
       } else {
         // Si no existe un registro, se puede crear uno nuevo
         await this.db.collection('productos').add({
           idProducto: productoId,
-          total: cantidad,
-          totalMoney: precio,
+          total: canalVenta == 'DS' ? cantidad : 0,
+          totalMoney: canalVenta == 'DS' ? precio : 0,
           mes: update.mes,
           anio: update.anio,
           nombreProducto: productoNombre,
           ds: true,
         });
         console.log(
-          `Nuevo registro del producto ${productoNombre} creado para mes: ${update.mes}, año: ${update.anio}.`,
+          `Nuevo registro del producto ${productoNombre} de Distribuidor creado para mes: ${update.mes}, año: ${update.anio}.`,
         );
       }
     }

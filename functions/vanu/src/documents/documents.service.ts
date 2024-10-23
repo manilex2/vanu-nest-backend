@@ -996,7 +996,7 @@ export class DocumentsService {
     let clientesActualizados = 0;
     try {
       const fechaLimite = DateTime.now();
-      fechaLimite.minus({ days: 1 }); // Calcula la fecha de hace un mes
+      fechaLimite.minus({ month: 1 }); // Calcula la fecha de hace un mes
 
       const mesActual = DateTime.now().month; // Mes actual (de 1 a 12)
       const añoActual = DateTime.now().year; // Año actual

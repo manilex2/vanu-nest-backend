@@ -15,6 +15,7 @@ import {
 import sucursales from '../common/sucursales.json';
 import { ConfigService } from '@nestjs/config';
 import { ParamsDTO } from './params.interface';
+import { DateTime } from 'luxon';
 
 @Injectable()
 export class DocumentsService {
@@ -100,13 +101,13 @@ export class DocumentsService {
             let idCiudadDestino: DocumentReference | number | null = null;
             let idSucursalDestino: DocumentReference | number | null = null;
             const total = Number(doc.total);
-            let fechaEmision: any = null;
+            let fechaEmision: DateTime | null = null;
             if (doc.fecha_emision.split('/').length == 3) {
-              fechaEmision = doc.fecha_emision.split('/');
-              fechaEmision = new Date(
-                fechaEmision[2],
-                Number(fechaEmision[1]) - 1,
-                fechaEmision[0],
+              const [day, month, year] = doc.fecha_emision.split('/');
+              fechaEmision = DateTime.utc(
+                Number(year),
+                Number(month),
+                Number(day),
               );
             }
 
@@ -165,7 +166,8 @@ export class DocumentsService {
               documento: doc.documento,
               estado: 1,
               urlRide: doc.url_ride,
-              fechaEmision: fechaEmision != null ? fechaEmision : date,
+              fechaEmision:
+                fechaEmision != null ? fechaEmision.toJSDate() : date,
               fechaCreacion: date,
               total: total,
               descripcion: doc.descripcion,

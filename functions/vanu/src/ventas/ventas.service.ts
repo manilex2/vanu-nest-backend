@@ -251,8 +251,8 @@ export class VentasService {
     try {
       await institutionRef[0]
         .update({
-          mes: mesActual,
-          anio: anioActual,
+          mesActual: mesActual,
+          anioActual: anioActual,
         })
         .catch((err) => {
           throw new HttpException(err, HttpStatus.INTERNAL_SERVER_ERROR);

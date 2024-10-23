@@ -110,10 +110,10 @@ export class GuidesService {
    * Obtiene los documentos 'pendientes' de la base de datos y los procesa
    * para crear la guía en ServiCli.
    * @param {string | null} idDocumento Id de documento a generar guia.
-   * @return {boolean} - Retorna true si se pudo crear la guia.
+   * @return {number} - Retorna el número de guías generadas.
    */
-  async sendDocuments(idDocumento: string | null): Promise<boolean> {
-    let generated: boolean = false;
+  async sendDocuments(idDocumento: string | null): Promise<number> {
+    let generated: number = 0;
     try {
       let documents: DocumentData[];
 
@@ -135,14 +135,12 @@ export class GuidesService {
               doc,
               this.requestJson,
             );
-
-            const ciudad: RowData = {
-              idCiudad: body['ID_CIUDAD_DESTINO'],
-              nombreCiudad: body['nombre_ciudad'],
-            };
-            delete body['nombre_ciudad'];
-
             if (body != null) {
+              const ciudad: RowData = {
+                idCiudad: body['ID_CIUDAD_DESTINO'],
+                nombreCiudad: body['nombre_ciudad'],
+              };
+              delete body['nombre_ciudad'];
               const idGuia: number = await this.generateGuideServiCli(
                 doc,
                 body,
@@ -151,11 +149,11 @@ export class GuidesService {
                 // setGuideToDocument(idGuia, doc);
 
                 this.setGuide(idGuia, doc, ciudad, client);
+                generated++;
               }
             }
           }
         }
-        generated = true;
       }
       return generated;
     } catch (error) {
@@ -241,21 +239,22 @@ export class GuidesService {
     const lastNameClient: string =
       names.length == 4 ? names[2] + ' ' + names[3] : names[1];
 
-    const city: DocumentData | null = await this.commonService.getCity(
-      document.idCiudadDestino,
-    );
+    const city: DocumentData | null =
+      'idCiudadDestino' in document && document.CiudadDestino != null
+        ? await this.commonService.getCity(document.idCiudadDestino)
+        : null;
     const sucursal: DocumentData | null =
       'idSucursalDestino' in document && document.idSucursalDestino != null
         ? await this.commonService.getSucursal(document.idSucursalDestino)
         : null;
 
     if (city == null) {
-      console.log('Error al obtener las ciudades');
+      console.log('No pudo obtenerse la ciudad.');
       return null;
     }
 
     if (sucursal == null && document.idSucursalDestino != null) {
-      console.log('Error al obtener las sucursales');
+      console.log('No pudo obtenerse la sucursal.');
       return null;
     }
 
@@ -467,7 +466,7 @@ export class GuidesService {
       client = document.otroDestinatario;
     } else {
       try {
-        const clientRef: DocumentReference = document.idClient;
+        const clientRef: DocumentReference = document.idCliente;
         client = (await clientRef.get()).data();
       } catch (error) {
         console.error('Error al obtener cliente de la base.');

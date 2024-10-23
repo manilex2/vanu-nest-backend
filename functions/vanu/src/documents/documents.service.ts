@@ -443,7 +443,7 @@ export class DocumentsService {
           ds: true,
         });
         console.log(
-          `Nuevo registro creado para mes: ${update.mes}, año: ${update.anio}.`,
+          `Nuevo registro del producto ${productoNombre} creado para mes: ${update.mes}, año: ${update.anio}.`,
         );
       }
     }

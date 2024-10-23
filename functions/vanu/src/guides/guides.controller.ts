@@ -136,9 +136,9 @@ export class GuidesController {
         params.idDocumento,
       );
       res.setHeader('Content-Type', 'application/json');
-      res.status(generated == true ? HttpStatus.CREATED : HttpStatus.OK).send({
+      res.status(generated != 0 ? HttpStatus.CREATED : HttpStatus.OK).send({
         message:
-          generated == true
+          generated != 0
             ? 'Guías generadas correctamente'
             : 'No hay documentos para generar guías.',
       });

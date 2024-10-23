@@ -13,7 +13,11 @@ import { GuidesService } from './guides.service';
 import axios, { AxiosResponse, AxiosRequestConfig } from 'axios';
 import { CommonService } from '../common/common.service';
 import { DocumentData, getFirestore } from 'firebase-admin/firestore';
-import { ParamsGuideDTO, ParamsManifiestoDTO } from './paramsGuide.interface';
+import {
+  ParamsGuideDTO,
+  ParamsManifiestoDTO,
+  ParamsGenerateGuideDTO,
+} from './paramsGuide.interface';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('guides')
@@ -121,14 +125,23 @@ export class GuidesController {
   async generateGuideServiCli(
     @Req() req: Request,
     @Res() res: Response,
-    @Query() idDocumento: string | null,
+    @Query() params: ParamsGenerateGuideDTO,
   ) {
     try {
-      await this.guidesService.sendDocuments(idDocumento);
+      // Verificamos si idDocumento no está presente o es un string vacío y lo convertimos a null
+      if (!params.idDocumento) {
+        params.idDocumento = null;
+      }
+      const generated = await this.guidesService.sendDocuments(
+        params.idDocumento,
+      );
       res.setHeader('Content-Type', 'application/json');
-      res
-        .status(HttpStatus.OK)
-        .send({ message: 'Guías generadas correctamente' });
+      res.status(generated == true ? HttpStatus.CREATED : HttpStatus.OK).send({
+        message:
+          generated == true
+            ? 'Guías generadas correctamente'
+            : 'No hay documentos para generar guías.',
+      });
     } catch (error) {
       if (error instanceof HttpException) {
         console.log(JSON.stringify(error.message));

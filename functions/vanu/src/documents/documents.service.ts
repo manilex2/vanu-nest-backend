@@ -26,10 +26,12 @@ export class DocumentsService {
 
   /**
    * Guarda los documentos nuevos en la base de datos.
+   * @returns {boolean} Retorna true si se generaron nuevos documentos
    */
   async saveDocuments() {
     let documentosActualizados: number = 0;
     let date: number | Date = Date.now();
+    let generated: boolean = false;
     date = new Date(date - 5 * 1000 * 60 * 60);
     let docs: Contifico[] | null;
     try {
@@ -56,6 +58,8 @@ export class DocumentsService {
         .catch((err) => console.error(err));
       if (docs.length < 1) {
         console.log('No hay documentos para agregar');
+        generated = false;
+        return generated;
       }
       for (const doc of docs) {
         if (
@@ -207,6 +211,8 @@ export class DocumentsService {
         documentosActualizados++;
       }
       console.log(`${documentosActualizados} documento(s) creado(s)`);
+      generated = true;
+      return generated;
     } catch (error) {
       console.log(error);
       throw new HttpException(

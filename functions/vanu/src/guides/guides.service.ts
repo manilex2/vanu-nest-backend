@@ -155,8 +155,8 @@ export class GuidesService {
             }
           }
         }
+        generated = true;
       }
-      generated = true;
       return generated;
     } catch (error) {
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -414,6 +414,7 @@ export class GuidesService {
    */
   async getDocuments(): Promise<DocumentData[]> {
     let docs: DocumentData[] | null = null;
+    console.log('Multiple Documents');
     try {
       docs = (
         await this.db
@@ -426,7 +427,8 @@ export class GuidesService {
       });
       return docs;
     } catch (error) {
-      console.error(`Error al obtener los documentos de la base: ${error}`);
+      console.error(`Error al obtener los documentos de la base.`);
+      console.error(error);
       throw error;
     }
   }
@@ -438,6 +440,7 @@ export class GuidesService {
    */
   async getSingleDocument(idDocumento: string): Promise<DocumentData[]> {
     let docs: DocumentData | null = null;
+    console.log('Single Document');
     try {
       await this.db
         .collection('documentos')

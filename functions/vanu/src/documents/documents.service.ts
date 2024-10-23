@@ -10,6 +10,7 @@ import {
   Timestamp,
   FieldValue,
   QuerySnapshot,
+  QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
 import sucursales from '../common/sucursales.json';
 import { ConfigService } from '@nestjs/config';
@@ -472,13 +473,13 @@ export class DocumentsService {
     let cities: string | any[];
     let ciudad: DocumentReference;
 
-    const citiesWithoutName = (
+    const citiesWithoutName: QueryDocumentSnapshot[] = (
       await this.db.collection('ciudades').get()
     ).docs.filter(
       (doc) => doc.data().nombre === null || doc.data().nombre === undefined,
     );
 
-    if (citiesWithoutName.length <= 1) {
+    if (citiesWithoutName.length < 1) {
       console.log('No hay ciudades para actualizar');
       return;
     }
@@ -512,6 +513,7 @@ export class DocumentsService {
       ).docs.map((ciudad) => {
         return ciudad;
       });
+      console.log('Nombre de Ciudad: ', city.nombre);
       if (
         ciudades.length < 1 ||
         ciudades[0].data().nombre ||
@@ -522,7 +524,7 @@ export class DocumentsService {
       ciudad = ciudades[0].ref;
       await ciudad
         .update({
-          nombre: city.nombre,
+          nombre: city.nombre || null,
         })
         .catch((err) => {
           console.error('Error al actualizar ciudades');
@@ -535,15 +537,12 @@ export class DocumentsService {
       (doc) => doc.data().nombre === null || doc.data().nombre === undefined,
     );
     for (const city of citiesWithoutNameAfter) {
-      if (!city.data().codigo) {
-        continue;
-      }
-      await ciudad
-        .update({
-          nombre: String(city.data().codigo),
-        })
+      console.log(`Eliminando ciudad ${city.ref}...`);
+      await city.ref
+        .delete()
+        .then(() => console.log('Ciudad eliminada.'))
         .catch((err) => {
-          console.error('Error al actualizar ciudades');
+          console.error('Error al eliminar ciudad');
           throw err;
         });
     }
@@ -626,16 +625,18 @@ export class DocumentsService {
           if (provincias.length > 0) {
             provincia = provincias[0];
           } else {
-            provincia = await this.db
-              .collection('provincias')
-              .add({
-                nombre: sucursal.provincia,
-              })
-              .catch((err) => {
-                console.error(
-                  `No pudo agregar la provincia de nombre ${sucursal.provincia} por: ${err}`,
-                );
-              });
+            if (sucursal.provincia != '') {
+              provincia = await this.db
+                .collection('provincias')
+                .add({
+                  nombre: sucursal.provincia,
+                })
+                .catch((err) => {
+                  console.error(
+                    `No pudo agregar la provincia de nombre ${sucursal.provincia} por: ${err}`,
+                  );
+                });
+            }
           }
 
           const ciudades = (
@@ -650,48 +651,53 @@ export class DocumentsService {
           if (ciudades.length > 0) {
             ciudad = ciudades[0];
           } else {
-            ciudad = await this.db
-              .collection('ciudades')
+            if (sucursal.id_ciudad != '0') {
+              ciudad = await this.db
+                .collection('ciudades')
+                .add({
+                  codigo: Number(sucursal.id_ciudad) || null,
+                  nombre: null,
+                  provinciaId: provincia,
+                })
+                .catch((err) => {
+                  console.error(
+                    `No pudo agregar la ciudad de codigo ${sucursal.id_ciudad} por: ${err}`,
+                  );
+                });
+            }
+          }
+
+          if (sucursal.id != '0') {
+            await this.db
+              .collection('sucursales')
               .add({
-                codigo: Number(sucursal.id_ciudad) || null,
-                provinciaId: provincia,
+                tipoCS: sucursal.tipo_cs,
+                CS: sucursal.cs,
+                direccion: sucursal.direccion,
+                sector: sucursal.sector == 'null' ? null : sucursal.sector,
+                telefono: sucursal.telefono,
+                horaPromedioEntregaOficina:
+                  sucursal.hora_promedio_entrega_oficina == 'null'
+                    ? null
+                    : sucursal.hora_promedio_entrega_oficina,
+                horarioLaboral: sucursal.horario_laboral,
+                horarioFinSemana:
+                  sucursal.horario_fin_semana == 'null'
+                    ? null
+                    : sucursal.horario_fin_semana,
+                email: sucursal.email,
+                codigoPostal: sucursal.codigo_postal,
+                CILResponsable: sucursal.cil_responsable,
+                codigo: Number(sucursal.id) || null,
+                idCiudad: ciudad,
+                provincia: provincia,
               })
               .catch((err) => {
                 console.error(
-                  `No pudo agregar la ciudad de codigo ${sucursal.id_ciudad} por: ${err}`,
+                  `No pudo agregar la sucursal de codigo ${sucursal.id} por: ${err}`,
                 );
               });
           }
-
-          await this.db
-            .collection('sucursales')
-            .add({
-              tipoCS: sucursal.tipo_cs,
-              CS: sucursal.cs,
-              direccion: sucursal.direccion,
-              sector: sucursal.sector == 'null' ? null : sucursal.sector,
-              telefono: sucursal.telefono,
-              horaPromedioEntregaOficina:
-                sucursal.hora_promedio_entrega_oficina == 'null'
-                  ? null
-                  : sucursal.hora_promedio_entrega_oficina,
-              horarioLaboral: sucursal.horario_laboral,
-              horarioFinSemana:
-                sucursal.horario_fin_semana == 'null'
-                  ? null
-                  : sucursal.horario_fin_semana,
-              email: sucursal.email,
-              codigoPostal: sucursal.codigo_postal,
-              CILResponsable: sucursal.cil_responsable,
-              codigo: Number(sucursal.id) || null,
-              idCiudad: ciudad,
-              provincia: provincia,
-            })
-            .catch((err) => {
-              console.error(
-                `No pudo agregar la sucursal de codigo ${sucursal.id} por: ${err}`,
-              );
-            });
         } catch (error) {
           console.log(error);
           continue;

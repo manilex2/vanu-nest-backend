@@ -84,6 +84,7 @@ export class VentasService {
               ventasEnvios: 0,
               envios: 0,
               clientesAtendidos: 0,
+              clientesNuevos: 0,
               pedidos: 0,
               principalesDestinos: [],
               tiposEnvio: { agencia: 0, domicilio: 0, desconocido: 0 },
@@ -93,6 +94,14 @@ export class VentasService {
           }
 
           const venta = ventasData[mesKey];
+
+          venta.clientesNuevos =
+            (
+              await this.db
+                .collection('clientes')
+                .where('nuevo', '==', true)
+                .get()
+            ).docs.length || 0;
 
           // Siempre incrementar 'pedidos'
           venta.pedidos += 1;

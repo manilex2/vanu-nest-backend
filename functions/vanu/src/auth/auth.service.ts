@@ -66,7 +66,7 @@ export class AuthService {
         HttpStatus.NOT_FOUND,
       );
     }
-    return 'Usuario creado con éxito';
+    return 'Contraseña cambiada con éxito';
   }
 
   /**

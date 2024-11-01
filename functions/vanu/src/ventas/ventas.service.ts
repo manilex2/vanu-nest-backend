@@ -264,6 +264,10 @@ export class VentasService {
     const fechaActual = DateTime.now();
     const mesActual = fechaActual.month;
     const anioActual = fechaActual.year;
+    let mesLabel = fechaActual
+      .setLocale('es')
+      .toLocaleString({ month: 'long' });
+    mesLabel = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
 
     // Actualizar el documento
     try {
@@ -276,6 +280,27 @@ export class VentasService {
           throw new HttpException(err, HttpStatus.INTERNAL_SERVER_ERROR);
         });
       console.log('Registro de institución actualizado correctamente');
+      const ventas = (
+        await this.db
+          .collection('ventas')
+          .where('mes', '==', mesActual)
+          .where('anio', '==', anioActual)
+          .get()
+      ).docs.length;
+      if (ventas < 1) {
+        await this.db.collection('ventas').add({
+          anio: anioActual,
+          mes: mesActual,
+          clientesAtendidos: 0,
+          clientesNuevos: 0,
+          envios: 0,
+          mesLabel: mesLabel,
+          pedidos: 0,
+          totalEnvios: 0,
+          totalVentas: 0,
+          ventasEnvios: 0,
+        });
+      }
       return 'Se actualizo correctamente el mes y año de la institución';
     } catch (error) {
       console.error('Error actualizando el registro:', error);
